@@ -1,0 +1,2 @@
+ID, Data Source, Description, Device/site, Event Tags, Sensor, Rate (Hz), Event Date, Time (UTC), Wave Start, Wave End, Duration (s)
+1355, Provider 9,"Number of measuring PMUs: 3", , Equipment::Overhead Equipment::Conductor;  Phase::Three-phase::Phases ABC;  Events::Fault::Nonspecific Fault, PMU, 30.0, 2017-09-01, 20:00:00.000000, 20:00:00.000000, 20:03:59.966670, 239.966

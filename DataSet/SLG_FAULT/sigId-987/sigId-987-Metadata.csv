@@ -1,0 +1,2 @@
+ID, Data Source, Description, Device/site, Event Tags, Sensor, Rate (Hz), Event Date, Time (UTC), Wave Start, Wave End, Duration (s)
+987, Provider 9,"Number of measuring PMUs: 3", , Conditions::Weather::High Winds;  Equipment::Sources::Wind;  Phase::Single-phase-ground::Phase AG;  Equipment::Sources::Generator, PMU, 30.0, 2016-03-01, 19:00:00.000000, 19:00:00.000000, 19:03:59.967000, 239.967
