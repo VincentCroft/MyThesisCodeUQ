@@ -1,0 +1,87 @@
+# ============================================================
+# PMU Fault Classifier — Training Configuration
+# Protocol v1.2 Compatible
+# ============================================================
+
+data:
+  processed_data_root: "../ProcessedData"
+  fault_classes:
+    - NORMAL          # ERROR_CODE: 000
+    - SLG_FAULT       # ERROR_CODE: 201
+    - LL_FAULT        # ERROR_CODE: 202
+    - THREE_PHASE_FAULT # ERROR_CODE: 204
+  # Drop UNUSABLE rows (ERROR_CODE >= 300)
+  drop_unusable: true
+  # Drop DATA_MISSING rows (ERROR_CODE == 150) during training
+  drop_data_missing: false
+  # Sequence window size (rows)
+  window_size: 64
+  # Sliding window step
+  step_size: 32
+  # Train / Validation split ratio
+  val_split: 0.2
+  random_seed: 42
+
+features:
+  # Engineering features derived from raw columns (Protocol Sec. 8)
+  use_polar_to_rect: true   # (MAG, ANG) -> (Re, Im)
+  normalize_dfdt_freq: true
+  # Raw columns to use (all 14 measurement cols)
+  raw_cols:
+    - DFDT
+    - FREQ
+    - IA_MAG
+    - IA_ANG
+    - IB_MAG
+    - IB_ANG
+    - IC_MAG
+    - IC_ANG
+    - VA_MAG
+    - VA_ANG
+    - VB_MAG
+    - VB_ANG
+    - VC_MAG
+    - VC_ANG
+
+model:
+  type: "TCN"   # Options: TCN | LSTM | Transformer
+  # TCN params
+  tcn:
+    num_channels: [64, 128, 128, 64]
+    kernel_size: 3
+    dropout: 0.2
+  # LSTM params
+  lstm:
+    hidden_size: 128
+    num_layers: 2
+    dropout: 0.2
+  # Transformer params
+  transformer:
+    d_model: 64
+    nhead: 4
+    num_encoder_layers: 3
+    dim_feedforward: 256
+    dropout: 0.1
+  # Input/output
+  num_classes: 4
+  input_size: 26   # 14 raw + 12 rect features (6 phasors × 2)
+
+training:
+  epochs: 50
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  scheduler: "cosine"   # Options: cosine | step | none
+  step_lr_step: 10
+  step_lr_gamma: 0.5
+  early_stopping_patience: 10
+  checkpoint_dir: "../Code/logs/checkpoints"
+  log_dir: "../Code/logs"
+
+inference:
+  # Path to the best saved model checkpoint
+  model_path: "../Code/logs/checkpoints/best_model.pt"
+  # Minimum probability to report a class
+  min_report_prob: 0.01
+  # Top-k results to show
+  top_k: 4
