@@ -404,15 +404,15 @@ elif page == "🚀  Train":
     # Snapshot the values read from disk so we can compare
     # against whatever the user has typed in the widgets.
     _disk_snapshot = {
-        "model_type": cfg["model"]["type"],
-        "epochs": cfg["training"]["epochs"],
-        "batch_size": cfg["training"]["batch_size"],
-        "lr": float(cfg["training"]["learning_rate"]),
-        "scheduler": cfg["training"]["scheduler"],
-        "patience": cfg["training"]["early_stopping_patience"],
+        "model_type" : cfg["model"]["type"],
+        "epochs"     : cfg["training"]["epochs"],
+        "batch_size" : cfg["training"]["batch_size"],
+        "lr"         : float(cfg["training"]["learning_rate"]),
+        "scheduler"  : cfg["training"]["scheduler"],
+        "patience"   : cfg["training"]["early_stopping_patience"],
         "window_size": cfg["data"]["window_size"],
-        "step_size": cfg["data"]["step_size"],
-        "val_split": float(cfg["data"]["val_split"]),
+        "step_size"  : cfg["data"]["step_size"],
+        "val_split"  : float(cfg["data"]["val_split"]),
     }
     if "config_saved" not in st.session_state:
         st.session_state["config_saved"] = True  # starts clean
@@ -427,81 +427,61 @@ elif page == "🚀  Train":
                 index=["TCN", "LSTM", "Transformer"].index(cfg["model"]["type"]),
             )
             epochs = st.number_input(
-                "Epochs",
-                min_value=5,
-                max_value=500,
+                "Epochs", min_value=5, max_value=500,
                 value=cfg["training"]["epochs"],
             )
             batch_size = st.number_input(
-                "Batch Size",
-                min_value=16,
-                max_value=1024,
+                "Batch Size", min_value=16, max_value=1024,
                 value=cfg["training"]["batch_size"],
             )
 
         with c2:
             lr = st.number_input(
-                "Learning Rate",
-                min_value=1e-5,
-                max_value=1e-1,
+                "Learning Rate", min_value=1e-5, max_value=1e-1,
                 value=float(cfg["training"]["learning_rate"]),
                 format="%.5f",
             )
             scheduler = st.selectbox(
-                "LR Scheduler",
-                ["cosine", "step", "none"],
+                "LR Scheduler", ["cosine", "step", "none"],
                 index=["cosine", "step", "none"].index(cfg["training"]["scheduler"]),
             )
             patience = st.number_input(
-                "Early Stopping Patience",
-                min_value=3,
-                max_value=50,
+                "Early Stopping Patience", min_value=3, max_value=50,
                 value=cfg["training"]["early_stopping_patience"],
             )
 
         with c3:
             window_size = st.number_input(
-                "Window Size",
-                min_value=16,
-                max_value=512,
+                "Window Size", min_value=16, max_value=512,
                 value=cfg["data"]["window_size"],
             )
             step_size = st.number_input(
-                "Step Size",
-                min_value=8,
-                max_value=256,
+                "Step Size", min_value=8, max_value=256,
                 value=cfg["data"]["step_size"],
             )
             val_split = st.slider(
-                "Validation Split",
-                min_value=0.1,
-                max_value=0.4,
-                value=float(cfg["data"]["val_split"]),
-                step=0.05,
+                "Validation Split", min_value=0.1, max_value=0.4,
+                value=float(cfg["data"]["val_split"]), step=0.05,
             )
 
         # Detect unsaved changes
         _current = {
-            "model_type": model_type,
-            "epochs": int(epochs),
-            "batch_size": int(batch_size),
-            "lr": float(lr),
-            "scheduler": scheduler,
-            "patience": int(patience),
-            "window_size": int(window_size),
-            "step_size": int(step_size),
+            "model_type": model_type, "epochs": int(epochs),
+            "batch_size": int(batch_size), "lr": float(lr),
+            "scheduler": scheduler, "patience": int(patience),
+            "window_size": int(window_size), "step_size": int(step_size),
             "val_split": float(val_split),
         }
         _has_unsaved = (
-            _current["model_type"] != _disk_snapshot["model_type"]
-            or _current["epochs"] != _disk_snapshot["epochs"]
-            or _current["batch_size"] != _disk_snapshot["batch_size"]
-            or abs(_current["lr"] - _disk_snapshot["lr"]) > 1e-9
-            or _current["scheduler"] != _disk_snapshot["scheduler"]
-            or _current["patience"] != _disk_snapshot["patience"]
-            or _current["window_size"] != _disk_snapshot["window_size"]
-            or _current["step_size"] != _disk_snapshot["step_size"]
-            or abs(_current["val_split"] - _disk_snapshot["val_split"]) > 1e-6
+            _current["model_type"]  != _disk_snapshot["model_type"]  or
+            _current["epochs"]      != _disk_snapshot["epochs"]       or
+            _current["batch_size"]  != _disk_snapshot["batch_size"]   or
+            abs(_current["lr"]      -  _disk_snapshot["lr"]) > 1e-9   or
+            _current["scheduler"]   != _disk_snapshot["scheduler"]    or
+            _current["patience"]    != _disk_snapshot["patience"]     or
+            _current["window_size"] != _disk_snapshot["window_size"]  or
+            _current["step_size"]   != _disk_snapshot["step_size"]    or
+            abs(_current["val_split"] - _disk_snapshot["val_split"]) > 1e-6
         )
 
         if _has_unsaved:
@@ -511,15 +491,15 @@ elif page == "🚀  Train":
             st.session_state["config_saved"] = True
 
         if st.button("💾  Save Config", use_container_width=True):
-            cfg["model"]["type"] = model_type
-            cfg["training"]["epochs"] = int(epochs)
-            cfg["training"]["batch_size"] = int(batch_size)
-            cfg["training"]["learning_rate"] = float(lr)
-            cfg["training"]["scheduler"] = scheduler
-            cfg["training"]["early_stopping_patience"] = int(patience)
-            cfg["data"]["window_size"] = int(window_size)
-            cfg["data"]["step_size"] = int(step_size)
-            cfg["data"]["val_split"] = float(val_split)
+            cfg["model"]["type"]                          = model_type
+            cfg["training"]["epochs"]                     = int(epochs)
+            cfg["training"]["batch_size"]                 = int(batch_size)
+            cfg["training"]["learning_rate"]              = float(lr)
+            cfg["training"]["scheduler"]                  = scheduler
+            cfg["training"]["early_stopping_patience"]    = int(patience)
+            cfg["data"]["window_size"]                    = int(window_size)
+            cfg["data"]["step_size"]                      = int(step_size)
+            cfg["data"]["val_split"]                      = float(val_split)
             save_cfg(cfg)
             st.session_state["config_saved"] = True
             st.success("✅  Configuration saved.")
@@ -549,19 +529,15 @@ elif page == "🚀  Train":
             )
         with btn_col:
             if st.button("✔  Confirm Name", use_container_width=True):
-                name_candidate = run_name_input.strip() or _dt.now().strftime(
-                    "%Y-%m-%d-%H-%M"
-                )
+                name_candidate = run_name_input.strip() or _dt.now().strftime("%Y-%m-%d-%H-%M")
                 st.session_state["confirmed_run_name"] = name_candidate
                 st.success(f"Run name set to **{name_candidate}**")
 
     run_name_final = st.session_state["confirmed_run_name"]
-    existing_runs = list_runs()
+    existing_runs  = list_runs()
 
     if run_name_final in existing_runs:
-        st.warning(
-            f"⚠️  Run **{run_name_final}** already exists — it will be overwritten."
-        )
+        st.warning(f"⚠️  Run **{run_name_final}** already exists — it will be overwritten.")
     else:
         st.caption(f"Will save to  `logs/checkpoints/{run_name_final}/`")
 
@@ -571,22 +547,19 @@ elif page == "🚀  Train":
     ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1, 1, 2])
     with ctrl_col1:
         start_btn = st.button(
-            "▶️  Start Training",
-            use_container_width=True,
-            type="primary",
+            "▶️  Start Training", use_container_width=True, type="primary",
             disabled=st.session_state.get("training_running", False),
         )
     with ctrl_col2:
         stop_btn = st.button(
-            "⏹  Stop Training",
-            use_container_width=True,
+            "⏹  Stop Training", use_container_width=True,
             disabled=not st.session_state.get("training_running", False),
         )
     with ctrl_col3:
         if st.session_state.get("training_running", False):
             st.info("🔄  Training in progress…")
 
-    log_placeholder = st.empty()
+    log_placeholder    = st.empty()
     progress_placeholder = st.empty()
     metric_placeholder = st.empty()
 
@@ -596,28 +569,24 @@ elif page == "🚀  Train":
             "❌  You have unsaved configuration changes.  "
             "Please click **Save Config** before starting training."
         )
-        start_btn = False  # cancel the start
+        start_btn = False   # cancel the start
 
     # ── Launch training ───────────────────────────────────
     if start_btn:
         st.session_state["training_running"] = True
-        st.session_state["stop_requested"] = False
+        st.session_state["stop_requested"]   = False
         train_script = CODE_DIR / "train.py"
         cmd = [
-            PYTHON_EXE,
-            str(train_script),
-            "--model",
-            cfg["model"]["type"],
-            "--run-name",
-            run_name_final,
+            PYTHON_EXE, str(train_script),
+            "--model", cfg["model"]["type"],
+            "--run-name", run_name_final,
         ]
 
         log_lines: list[str] = []
-        proc_holder: list = [None]  # mutable container so thread can write proc ref
+        proc_holder: list    = [None]   # mutable container so thread can write proc ref
 
         def stream_process():
             import subprocess as _sp
-
             proc = _sp.Popen(
                 cmd,
                 stdout=_sp.PIPE,
@@ -641,8 +610,8 @@ elif page == "🚀  Train":
         thread.start()
 
         progress_bar = progress_placeholder.progress(0, text="Training in progress…")
-        epoch_seen = 0
-        max_epoch = int(epochs)
+        epoch_seen   = 0
+        max_epoch    = int(epochs)
 
         while thread.is_alive():
             time.sleep(0.5)
@@ -678,25 +647,21 @@ elif page == "🚀  Train":
         st.session_state["training_running"] = False
 
         _finished_rp = get_run_paths(run_name_final)
-        hist_fin = load_history(_finished_rp)
+        hist_fin     = load_history(_finished_rp)
         if hist_fin:
             best_val = max(hist_fin["val_acc"])
             m1, m2, m3 = metric_placeholder.columns(3)
             m1.metric("Best Val Accuracy", f"{best_val:.2%}")
-            m2.metric("Total Epochs", f"{len(hist_fin['val_acc'])}")
-            m3.metric("Final Val Loss", f"{hist_fin['val_loss'][-1]:.4f}")
+            m2.metric("Total Epochs",      f"{len(hist_fin['val_acc'])}")
+            m3.metric("Final Val Loss",    f"{hist_fin['val_loss'][-1]:.4f}")
             st.balloons()
 
-        st.info(
-            f"✅  Run **{run_name_final}** saved. Select it from the sidebar to analyse."
-        )
+        st.info(f"✅  Run **{run_name_final}** saved. Select it from the sidebar to analyse.")
 
     # ── Stop button outside the start block ──────────────
     if stop_btn and st.session_state.get("training_running", False):
         st.session_state["stop_requested"] = True
-        st.warning(
-            "⏹  Stop signal sent — training will terminate after the current epoch."
-        )
+        st.warning("⏹  Stop signal sent — training will terminate after the current epoch.")
 
 
 # ════════════════════════════════════════════════════════════
@@ -1310,17 +1275,15 @@ elif page == "🔍  Inference":
             if "ERROR_CODE" in df_infer.columns:
                 df_infer = df_infer[df_infer["ERROR_CODE"] < 300].reset_index(drop=True)
             if len(df_infer) == 0:
-                raise ValueError(
-                    "No usable rows remain after filtering UNUSABLE entries."
-                )
+                raise ValueError("No usable rows remain after filtering UNUSABLE entries.")
 
             feat = build_feature_matrix(df_infer, inf_cfg)
             feat = impute_nan(feat)
             feat_norm = normalizer.transform(feat)
 
             window = inf_cfg["data"]["window_size"]
-            step = inf_cfg["data"]["step_size"]
-            dummy = np.zeros(len(feat_norm), dtype=np.int64)
+            step   = inf_cfg["data"]["step_size"]
+            dummy  = np.zeros(len(feat_norm), dtype=np.int64)
             X_wins, _ = sliding_windows(feat_norm, dummy, window, step)
             if len(X_wins) == 0:
                 pad_len = window - len(feat_norm)
@@ -1335,32 +1298,25 @@ elif page == "🔍  Inference":
                     all_probs_list.append(F_nn.softmax(logits, dim=-1).numpy())
 
             all_probs_arr = np.concatenate(all_probs_list, axis=0)
-            mean_probs = all_probs_arr.mean(axis=0)
-            pred_label = int(np.argmax(mean_probs))
-            pred_class = CLASS_NAMES[pred_label]
-            pred_conf = float(mean_probs[pred_label])
+            mean_probs    = all_probs_arr.mean(axis=0)
+            pred_label    = int(np.argmax(mean_probs))
+            pred_class    = CLASS_NAMES[pred_label]
+            pred_conf     = float(mean_probs[pred_label])
             return pred_class, pred_conf, mean_probs, all_probs_arr, df_raw, X_wins
 
         # ── Run all files (with one spinner) ─────────────
         results_cache: list[dict] = []
-        errors_cache: list[str] = []
+        errors_cache:  list[str]  = []
         with st.spinner(f"Running inference on {len(uploaded_files)} file(s)…"):
             for uf in uploaded_files:
                 try:
-                    pred_class, pred_conf, mean_probs, all_probs, df_raw, X_wins = (
-                        _infer_one(uf)
-                    )
-                    results_cache.append(
-                        {
-                            "name": uf.name,
-                            "pred_class": pred_class,
-                            "pred_conf": pred_conf,
-                            "mean_probs": mean_probs,
-                            "all_probs": all_probs,
-                            "df_raw": df_raw,
-                            "X_wins": X_wins,
-                        }
-                    )
+                    pred_class, pred_conf, mean_probs, all_probs, df_raw, X_wins = _infer_one(uf)
+                    results_cache.append({
+                        "name": uf.name, "pred_class": pred_class,
+                        "pred_conf": pred_conf, "mean_probs": mean_probs,
+                        "all_probs": all_probs, "df_raw": df_raw,
+                        "X_wins": X_wins,
+                    })
                 except Exception as exc:
                     errors_cache.append(f"**{uf.name}**: {exc}")
 
@@ -1379,39 +1335,30 @@ elif page == "🔍  Inference":
             )
             summary_rows = []
             for r in results_cache:
-                summary_rows.append(
-                    {
-                        "File": r["name"],
-                        "Prediction": r["pred_class"],
-                        "Confidence": f"{r['pred_conf']:.1%}",
-                        **{
-                            cls: f"{float(r['mean_probs'][i]):.2%}"
-                            for i, cls in enumerate(CLASS_NAMES)
-                        },
-                    }
-                )
-            st.dataframe(
-                pd.DataFrame(summary_rows), hide_index=True, use_container_width=True
-            )
+                summary_rows.append({
+                    "File":       r["name"],
+                    "Prediction": r["pred_class"],
+                    "Confidence": f"{r['pred_conf']:.1%}",
+                    **{cls: f"{float(r['mean_probs'][i]):.2%}"
+                       for i, cls in enumerate(CLASS_NAMES)},
+                })
+            st.dataframe(pd.DataFrame(summary_rows), hide_index=True, use_container_width=True)
             st.markdown("---")
 
         # ── Per-file detailed results ─────────────────────
         all_reports: list[dict] = []
         for r in results_cache:
-            fname = r["name"]
+            fname      = r["name"]
             pred_class = r["pred_class"]
-            pred_conf = r["pred_conf"]
+            pred_conf  = r["pred_conf"]
             mean_probs = r["mean_probs"]
-            all_probs = r["all_probs"]
-            df_raw = r["df_raw"]
-            X_wins = r["X_wins"]
+            all_probs  = r["all_probs"]
+            df_raw     = r["df_raw"]
+            X_wins     = r["X_wins"]
 
             # Expand by default if only one file, else collapsed
-            expand_by_default = len(results_cache) == 1
-            with st.expander(
-                f"📄  {fname}  —  {pred_class}  ({pred_conf:.1%})",
-                expanded=expand_by_default,
-            ):
+            expand_by_default = (len(results_cache) == 1)
+            with st.expander(f"📄  {fname}  —  {pred_class}  ({pred_conf:.1%})", expanded=expand_by_default):
 
                 st.markdown(
                     '<div class="section-header">Data Preview</div>',
@@ -1454,7 +1401,7 @@ elif page == "🔍  Inference":
                     st.markdown("**Class Probabilities**")
                     for i, cls in enumerate(CLASS_NAMES):
                         color = CLASS_COLORS[cls]
-                        prob = float(mean_probs[i])
+                        prob  = float(mean_probs[i])
                         st.markdown(
                             f'<div style="display:flex;align-items:center;gap:8px;margin:6px 0;">'
                             f'<span style="color:{color};font-weight:600;min-width:160px;">{cls}</span>'
@@ -1476,31 +1423,20 @@ elif page == "🔍  Inference":
                     for i, cls in enumerate(CLASS_NAMES):
                         fig2.add_trace(
                             go.Scatter(
-                                x=win_idx,
-                                y=all_probs[:, i],
-                                mode="lines",
-                                name=cls,
-                                line=dict(
-                                    color=list(CLASS_COLORS.values())[i], width=2
-                                ),
-                                fill="tozeroy",
-                                opacity=0.3,
+                                x=win_idx, y=all_probs[:, i],
+                                mode="lines", name=cls,
+                                line=dict(color=list(CLASS_COLORS.values())[i], width=2),
+                                fill="tozeroy", opacity=0.3,
                             )
                         )
                     fig2.update_layout(
-                        paper_bgcolor="#0f172a",
-                        plot_bgcolor="#0f172a",
+                        paper_bgcolor="#0f172a", plot_bgcolor="#0f172a",
                         font=dict(color="#94a3b8"),
                         xaxis=dict(title="Window Index", gridcolor="#1e293b"),
-                        yaxis=dict(
-                            title="Probability",
-                            tickformat=".0%",
-                            gridcolor="#1e293b",
-                            range=[0, 1],
-                        ),
+                        yaxis=dict(title="Probability", tickformat=".0%",
+                                   gridcolor="#1e293b", range=[0, 1]),
                         legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
-                        margin=dict(l=10, r=10, t=20, b=10),
-                        height=280,
+                        margin=dict(l=10, r=10, t=20, b=10), height=280,
                     )
                     st.plotly_chart(fig2, use_container_width=True)
                 except ImportError:
@@ -1514,9 +1450,9 @@ elif page == "🔍  Inference":
                 summary_df = pd.DataFrame(
                     {
                         "Fault Class": CLASS_NAMES,
-                        "Mean Prob": [f"{p:.2%}" for p in mean_probs],
-                        "Max Prob": [f"{p:.2%}" for p in all_probs.max(axis=0)],
-                        "Min Prob": [f"{p:.2%}" for p in all_probs.min(axis=0)],
+                        "Mean Prob":   [f"{p:.2%}" for p in mean_probs],
+                        "Max Prob":    [f"{p:.2%}" for p in all_probs.max(axis=0)],
+                        "Min Prob":    [f"{p:.2%}" for p in all_probs.min(axis=0)],
                         "Description": [CLASS_DESC[c] for c in CLASS_NAMES],
                     }
                 ).sort_values("Mean Prob", ascending=False)

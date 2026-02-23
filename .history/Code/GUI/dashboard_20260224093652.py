@@ -404,15 +404,15 @@ elif page == "🚀  Train":
     # Snapshot the values read from disk so we can compare
     # against whatever the user has typed in the widgets.
     _disk_snapshot = {
-        "model_type": cfg["model"]["type"],
-        "epochs": cfg["training"]["epochs"],
-        "batch_size": cfg["training"]["batch_size"],
-        "lr": float(cfg["training"]["learning_rate"]),
-        "scheduler": cfg["training"]["scheduler"],
-        "patience": cfg["training"]["early_stopping_patience"],
+        "model_type" : cfg["model"]["type"],
+        "epochs"     : cfg["training"]["epochs"],
+        "batch_size" : cfg["training"]["batch_size"],
+        "lr"         : float(cfg["training"]["learning_rate"]),
+        "scheduler"  : cfg["training"]["scheduler"],
+        "patience"   : cfg["training"]["early_stopping_patience"],
         "window_size": cfg["data"]["window_size"],
-        "step_size": cfg["data"]["step_size"],
-        "val_split": float(cfg["data"]["val_split"]),
+        "step_size"  : cfg["data"]["step_size"],
+        "val_split"  : float(cfg["data"]["val_split"]),
     }
     if "config_saved" not in st.session_state:
         st.session_state["config_saved"] = True  # starts clean
@@ -427,81 +427,61 @@ elif page == "🚀  Train":
                 index=["TCN", "LSTM", "Transformer"].index(cfg["model"]["type"]),
             )
             epochs = st.number_input(
-                "Epochs",
-                min_value=5,
-                max_value=500,
+                "Epochs", min_value=5, max_value=500,
                 value=cfg["training"]["epochs"],
             )
             batch_size = st.number_input(
-                "Batch Size",
-                min_value=16,
-                max_value=1024,
+                "Batch Size", min_value=16, max_value=1024,
                 value=cfg["training"]["batch_size"],
             )
 
         with c2:
             lr = st.number_input(
-                "Learning Rate",
-                min_value=1e-5,
-                max_value=1e-1,
+                "Learning Rate", min_value=1e-5, max_value=1e-1,
                 value=float(cfg["training"]["learning_rate"]),
                 format="%.5f",
             )
             scheduler = st.selectbox(
-                "LR Scheduler",
-                ["cosine", "step", "none"],
+                "LR Scheduler", ["cosine", "step", "none"],
                 index=["cosine", "step", "none"].index(cfg["training"]["scheduler"]),
             )
             patience = st.number_input(
-                "Early Stopping Patience",
-                min_value=3,
-                max_value=50,
+                "Early Stopping Patience", min_value=3, max_value=50,
                 value=cfg["training"]["early_stopping_patience"],
             )
 
         with c3:
             window_size = st.number_input(
-                "Window Size",
-                min_value=16,
-                max_value=512,
+                "Window Size", min_value=16, max_value=512,
                 value=cfg["data"]["window_size"],
             )
             step_size = st.number_input(
-                "Step Size",
-                min_value=8,
-                max_value=256,
+                "Step Size", min_value=8, max_value=256,
                 value=cfg["data"]["step_size"],
             )
             val_split = st.slider(
-                "Validation Split",
-                min_value=0.1,
-                max_value=0.4,
-                value=float(cfg["data"]["val_split"]),
-                step=0.05,
+                "Validation Split", min_value=0.1, max_value=0.4,
+                value=float(cfg["data"]["val_split"]), step=0.05,
             )
 
         # Detect unsaved changes
         _current = {
-            "model_type": model_type,
-            "epochs": int(epochs),
-            "batch_size": int(batch_size),
-            "lr": float(lr),
-            "scheduler": scheduler,
-            "patience": int(patience),
-            "window_size": int(window_size),
-            "step_size": int(step_size),
+            "model_type": model_type, "epochs": int(epochs),
+            "batch_size": int(batch_size), "lr": float(lr),
+            "scheduler": scheduler, "patience": int(patience),
+            "window_size": int(window_size), "step_size": int(step_size),
             "val_split": float(val_split),
         }
         _has_unsaved = (
-            _current["model_type"] != _disk_snapshot["model_type"]
-            or _current["epochs"] != _disk_snapshot["epochs"]
-            or _current["batch_size"] != _disk_snapshot["batch_size"]
-            or abs(_current["lr"] - _disk_snapshot["lr"]) > 1e-9
-            or _current["scheduler"] != _disk_snapshot["scheduler"]
-            or _current["patience"] != _disk_snapshot["patience"]
-            or _current["window_size"] != _disk_snapshot["window_size"]
-            or _current["step_size"] != _disk_snapshot["step_size"]
-            or abs(_current["val_split"] - _disk_snapshot["val_split"]) > 1e-6
+            _current["model_type"]  != _disk_snapshot["model_type"]  or
+            _current["epochs"]      != _disk_snapshot["epochs"]       or
+            _current["batch_size"]  != _disk_snapshot["batch_size"]   or
+            abs(_current["lr"]      -  _disk_snapshot["lr"]) > 1e-9   or
+            _current["scheduler"]   != _disk_snapshot["scheduler"]    or
+            _current["patience"]    != _disk_snapshot["patience"]     or
+            _current["window_size"] != _disk_snapshot["window_size"]  or
+            _current["step_size"]   != _disk_snapshot["step_size"]    or
+            abs(_current["val_split"] - _disk_snapshot["val_split"]) > 1e-6
         )
 
         if _has_unsaved:
@@ -511,15 +491,15 @@ elif page == "🚀  Train":
             st.session_state["config_saved"] = True
 
         if st.button("💾  Save Config", use_container_width=True):
-            cfg["model"]["type"] = model_type
-            cfg["training"]["epochs"] = int(epochs)
-            cfg["training"]["batch_size"] = int(batch_size)
-            cfg["training"]["learning_rate"] = float(lr)
-            cfg["training"]["scheduler"] = scheduler
-            cfg["training"]["early_stopping_patience"] = int(patience)
-            cfg["data"]["window_size"] = int(window_size)
-            cfg["data"]["step_size"] = int(step_size)
-            cfg["data"]["val_split"] = float(val_split)
+            cfg["model"]["type"]                          = model_type
+            cfg["training"]["epochs"]                     = int(epochs)
+            cfg["training"]["batch_size"]                 = int(batch_size)
+            cfg["training"]["learning_rate"]              = float(lr)
+            cfg["training"]["scheduler"]                  = scheduler
+            cfg["training"]["early_stopping_patience"]    = int(patience)
+            cfg["data"]["window_size"]                    = int(window_size)
+            cfg["data"]["step_size"]                      = int(step_size)
+            cfg["data"]["val_split"]                      = float(val_split)
             save_cfg(cfg)
             st.session_state["config_saved"] = True
             st.success("✅  Configuration saved.")
@@ -549,19 +529,15 @@ elif page == "🚀  Train":
             )
         with btn_col:
             if st.button("✔  Confirm Name", use_container_width=True):
-                name_candidate = run_name_input.strip() or _dt.now().strftime(
-                    "%Y-%m-%d-%H-%M"
-                )
+                name_candidate = run_name_input.strip() or _dt.now().strftime("%Y-%m-%d-%H-%M")
                 st.session_state["confirmed_run_name"] = name_candidate
                 st.success(f"Run name set to **{name_candidate}**")
 
     run_name_final = st.session_state["confirmed_run_name"]
-    existing_runs = list_runs()
+    existing_runs  = list_runs()
 
     if run_name_final in existing_runs:
-        st.warning(
-            f"⚠️  Run **{run_name_final}** already exists — it will be overwritten."
-        )
+        st.warning(f"⚠️  Run **{run_name_final}** already exists — it will be overwritten.")
     else:
         st.caption(f"Will save to  `logs/checkpoints/{run_name_final}/`")
 
@@ -571,22 +547,19 @@ elif page == "🚀  Train":
     ctrl_col1, ctrl_col2, ctrl_col3 = st.columns([1, 1, 2])
     with ctrl_col1:
         start_btn = st.button(
-            "▶️  Start Training",
-            use_container_width=True,
-            type="primary",
+            "▶️  Start Training", use_container_width=True, type="primary",
             disabled=st.session_state.get("training_running", False),
         )
     with ctrl_col2:
         stop_btn = st.button(
-            "⏹  Stop Training",
-            use_container_width=True,
+            "⏹  Stop Training", use_container_width=True,
             disabled=not st.session_state.get("training_running", False),
         )
     with ctrl_col3:
         if st.session_state.get("training_running", False):
             st.info("🔄  Training in progress…")
 
-    log_placeholder = st.empty()
+    log_placeholder    = st.empty()
     progress_placeholder = st.empty()
     metric_placeholder = st.empty()
 
@@ -596,28 +569,24 @@ elif page == "🚀  Train":
             "❌  You have unsaved configuration changes.  "
             "Please click **Save Config** before starting training."
         )
-        start_btn = False  # cancel the start
+        start_btn = False   # cancel the start
 
     # ── Launch training ───────────────────────────────────
     if start_btn:
         st.session_state["training_running"] = True
-        st.session_state["stop_requested"] = False
+        st.session_state["stop_requested"]   = False
         train_script = CODE_DIR / "train.py"
         cmd = [
-            PYTHON_EXE,
-            str(train_script),
-            "--model",
-            cfg["model"]["type"],
-            "--run-name",
-            run_name_final,
+            PYTHON_EXE, str(train_script),
+            "--model", cfg["model"]["type"],
+            "--run-name", run_name_final,
         ]
 
         log_lines: list[str] = []
-        proc_holder: list = [None]  # mutable container so thread can write proc ref
+        proc_holder: list    = [None]   # mutable container so thread can write proc ref
 
         def stream_process():
             import subprocess as _sp
-
             proc = _sp.Popen(
                 cmd,
                 stdout=_sp.PIPE,
@@ -641,8 +610,8 @@ elif page == "🚀  Train":
         thread.start()
 
         progress_bar = progress_placeholder.progress(0, text="Training in progress…")
-        epoch_seen = 0
-        max_epoch = int(epochs)
+        epoch_seen   = 0
+        max_epoch    = int(epochs)
 
         while thread.is_alive():
             time.sleep(0.5)
@@ -678,25 +647,21 @@ elif page == "🚀  Train":
         st.session_state["training_running"] = False
 
         _finished_rp = get_run_paths(run_name_final)
-        hist_fin = load_history(_finished_rp)
+        hist_fin     = load_history(_finished_rp)
         if hist_fin:
             best_val = max(hist_fin["val_acc"])
             m1, m2, m3 = metric_placeholder.columns(3)
             m1.metric("Best Val Accuracy", f"{best_val:.2%}")
-            m2.metric("Total Epochs", f"{len(hist_fin['val_acc'])}")
-            m3.metric("Final Val Loss", f"{hist_fin['val_loss'][-1]:.4f}")
+            m2.metric("Total Epochs",      f"{len(hist_fin['val_acc'])}")
+            m3.metric("Final Val Loss",    f"{hist_fin['val_loss'][-1]:.4f}")
             st.balloons()
 
-        st.info(
-            f"✅  Run **{run_name_final}** saved. Select it from the sidebar to analyse."
-        )
+        st.info(f"✅  Run **{run_name_final}** saved. Select it from the sidebar to analyse.")
 
     # ── Stop button outside the start block ──────────────
     if stop_btn and st.session_state.get("training_running", False):
         st.session_state["stop_requested"] = True
-        st.warning(
-            "⏹  Stop signal sent — training will terminate after the current epoch."
-        )
+        st.warning("⏹  Stop signal sent — training will terminate after the current epoch.")
 
 
 # ════════════════════════════════════════════════════════════
@@ -1237,7 +1202,7 @@ elif page == "📈  Analysis":
 elif page == "🔍  Inference":
     st.title("🔍 Fault Inference")
     st.markdown(
-        "Upload one or more Protocol v1.2 CSV files to classify fault types and "
+        "Upload a Protocol v1.2 CSV file to classify the fault type and "
         "view per-window probability distributions."
     )
     st.markdown("---")
@@ -1265,15 +1230,15 @@ elif page == "🔍  Inference":
         rp = get_run_paths(run_name)
         meta = json.loads(rp["model_meta_json"].read_text())
         ckpt = torch.load(rp["best_model_pt"], map_location="cpu")
-        cfg_ck = ckpt["cfg"]
-        cfg_ck["model"]["input_size"] = meta["input_size"]
+        cfg = ckpt["cfg"]
+        cfg["model"]["input_size"] = meta["input_size"]
 
-        mdl = build_model(cfg_ck)
+        mdl = build_model(cfg)
         mdl.load_state_dict(ckpt["model_state"])
         mdl.eval()
 
         normalizer = FeatureNormalizer.load(rp["normalizer_npz"])
-        return mdl, normalizer, cfg_ck
+        return mdl, normalizer, cfg
 
     try:
         model, normalizer, inf_cfg = load_inference_engine(_sel_run)
@@ -1281,38 +1246,59 @@ elif page == "🔍  Inference":
         st.error(f"Failed to load model: {e}")
         st.stop()
 
-    # ── File uploader (multiple files allowed) ────────────
-    uploaded_files = st.file_uploader(
-        "📂  Choose CSV file(s)",
+    uploaded = st.file_uploader(
+        "📂  Choose a CSV file",
         type=["csv"],
-        accept_multiple_files=True,
-        help="Select one or more Protocol v1.2 CSV files.  Each will be analysed independently.",
+        help="File must contain all 16 protocol columns including TIMESTAMP and ERROR_CODE.",
     )
 
-    if uploaded_files:
+    if uploaded is not None:
         import torch
         import torch.nn.functional as F_nn
         from models.feature_engineering import (
+            FeatureNormalizer,
             CLASS_NAMES,
+            CLASS_CODES,
             build_feature_matrix,
             impute_nan,
             sliding_windows,
         )
 
-        # ── Helper: run inference on one uploaded file ────
-        def _infer_one(uploaded_f):
-            """Return (pred_class, pred_conf, mean_probs, all_probs, df_raw, X_wins) or raise."""
-            with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
-                tmp.write(uploaded_f.read())
-                tmp_path = Path(tmp.name)
+        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+            tmp.write(uploaded.read())
+            tmp_path = Path(tmp.name)
+
+        try:
             df_raw = pd.read_csv(tmp_path, keep_default_na=True)
+        except Exception as e:
+            st.error(f"Failed to read CSV: {e}")
+            st.stop()
+
+        st.markdown(
+            '<div class="section-header">Data Preview</div>',
+            unsafe_allow_html=True,
+        )
+        st.dataframe(df_raw.head(10), use_container_width=True)
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Rows", f"{len(df_raw):,}")
+        c2.metric("Columns", len(df_raw.columns))
+        nan_pct = df_raw.iloc[:, :14].isna().mean().mean()
+        c3.metric("NaN Rate", f"{nan_pct:.1%}")
+        if "ERROR_CODE" in df_raw.columns:
+            usable = (df_raw["ERROR_CODE"] < 300).sum()
+            c4.metric("Usable Rows", f"{usable:,}")
+
+        st.markdown("---")
+
+        with st.spinner("Running inference…"):
             df_infer = df_raw.copy()
             if "ERROR_CODE" in df_infer.columns:
                 df_infer = df_infer[df_infer["ERROR_CODE"] < 300].reset_index(drop=True)
+
             if len(df_infer) == 0:
-                raise ValueError(
-                    "No usable rows remain after filtering UNUSABLE entries."
-                )
+                st.error("No usable rows remain after filtering UNUSABLE entries.")
+                st.stop()
 
             feat = build_feature_matrix(df_infer, inf_cfg)
             feat = impute_nan(feat)
@@ -1320,234 +1306,132 @@ elif page == "🔍  Inference":
 
             window = inf_cfg["data"]["window_size"]
             step = inf_cfg["data"]["step_size"]
-            dummy = np.zeros(len(feat_norm), dtype=np.int64)
-            X_wins, _ = sliding_windows(feat_norm, dummy, window, step)
+            dummy_lbls = np.zeros(len(feat_norm), dtype=np.int64)
+            X_wins, _ = sliding_windows(feat_norm, dummy_lbls, window, step)
+
             if len(X_wins) == 0:
                 pad_len = window - len(feat_norm)
                 feat_pad = np.pad(feat_norm, ((pad_len, 0), (0, 0)), mode="edge")
                 X_wins = feat_pad[np.newaxis, :, :]
 
             X_tensor = torch.tensor(X_wins, dtype=torch.float32)
-            all_probs_list = []
+            all_probs = []
             with torch.no_grad():
                 for i in range(0, len(X_tensor), 256):
                     logits = model(X_tensor[i : i + 256])
-                    all_probs_list.append(F_nn.softmax(logits, dim=-1).numpy())
+                    all_probs.append(F_nn.softmax(logits, dim=-1).numpy())
 
-            all_probs_arr = np.concatenate(all_probs_list, axis=0)
-            mean_probs = all_probs_arr.mean(axis=0)
+            all_probs = np.concatenate(all_probs, axis=0)
+            mean_probs = all_probs.mean(axis=0)
             pred_label = int(np.argmax(mean_probs))
             pred_class = CLASS_NAMES[pred_label]
             pred_conf = float(mean_probs[pred_label])
-            return pred_class, pred_conf, mean_probs, all_probs_arr, df_raw, X_wins
 
-        # ── Run all files (with one spinner) ─────────────
-        results_cache: list[dict] = []
-        errors_cache: list[str] = []
-        with st.spinner(f"Running inference on {len(uploaded_files)} file(s)…"):
-            for uf in uploaded_files:
-                try:
-                    pred_class, pred_conf, mean_probs, all_probs, df_raw, X_wins = (
-                        _infer_one(uf)
-                    )
-                    results_cache.append(
-                        {
-                            "name": uf.name,
-                            "pred_class": pred_class,
-                            "pred_conf": pred_conf,
-                            "mean_probs": mean_probs,
-                            "all_probs": all_probs,
-                            "df_raw": df_raw,
-                            "X_wins": X_wins,
-                        }
-                    )
-                except Exception as exc:
-                    errors_cache.append(f"**{uf.name}**: {exc}")
+        st.markdown(
+            '<div class="section-header">Inference Results</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown("")
 
-        # Show errors
-        for err in errors_cache:
-            st.error(err)
+        res_col, detail_col = st.columns(2)
 
-        if not results_cache:
-            st.stop()
-
-        # ── Batch summary table (multi-file only) ─────────
-        if len(results_cache) > 1:
+        with res_col:
+            st.markdown("**Primary Prediction**")
+            st.markdown(badge_html(pred_class), unsafe_allow_html=True)
             st.markdown(
-                '<div class="section-header">Batch Summary</div>',
+                f'<p style="color:#94a3b8;margin:4px 0;">'
+                f'{CLASS_DESC.get(pred_class, "")}</p>',
                 unsafe_allow_html=True,
             )
-            summary_rows = []
-            for r in results_cache:
-                summary_rows.append(
-                    {
-                        "File": r["name"],
-                        "Prediction": r["pred_class"],
-                        "Confidence": f"{r['pred_conf']:.1%}",
-                        **{
-                            cls: f"{float(r['mean_probs'][i]):.2%}"
-                            for i, cls in enumerate(CLASS_NAMES)
-                        },
-                    }
-                )
-            st.dataframe(
-                pd.DataFrame(summary_rows), hide_index=True, use_container_width=True
+            st.markdown(
+                f'<p style="color:#38bdf8;font-size:2rem;font-weight:700;margin:0;">'
+                f"{pred_conf:.1%}</p>",
+                unsafe_allow_html=True,
             )
-            st.markdown("---")
+            st.caption(f"Windows analysed: {len(X_wins)}")
 
-        # ── Per-file detailed results ─────────────────────
-        all_reports: list[dict] = []
-        for r in results_cache:
-            fname = r["name"]
-            pred_class = r["pred_class"]
-            pred_conf = r["pred_conf"]
-            mean_probs = r["mean_probs"]
-            all_probs = r["all_probs"]
-            df_raw = r["df_raw"]
-            X_wins = r["X_wins"]
-
-            # Expand by default if only one file, else collapsed
-            expand_by_default = len(results_cache) == 1
-            with st.expander(
-                f"📄  {fname}  —  {pred_class}  ({pred_conf:.1%})",
-                expanded=expand_by_default,
-            ):
-
+        with detail_col:
+            st.markdown("**Class Probabilities**")
+            for i, cls in enumerate(CLASS_NAMES):
+                color = CLASS_COLORS[cls]
+                prob = float(mean_probs[i])
                 st.markdown(
-                    '<div class="section-header">Data Preview</div>',
-                    unsafe_allow_html=True,
-                )
-                st.dataframe(df_raw.head(10), use_container_width=True)
-
-                dc1, dc2, dc3, dc4 = st.columns(4)
-                dc1.metric("Rows", f"{len(df_raw):,}")
-                dc2.metric("Columns", len(df_raw.columns))
-                nan_pct = df_raw.iloc[:, :14].isna().mean().mean()
-                dc3.metric("NaN Rate", f"{nan_pct:.1%}")
-                if "ERROR_CODE" in df_raw.columns:
-                    usable_cnt = (df_raw["ERROR_CODE"] < 300).sum()
-                    dc4.metric("Usable Rows", f"{usable_cnt:,}")
-
-                st.markdown("---")
-                st.markdown(
-                    '<div class="section-header">Inference Results</div>',
+                    f'<div style="display:flex;align-items:center;gap:8px;margin:6px 0;">'
+                    f'<span style="color:{color};font-weight:600;min-width:160px;">{cls}</span>'
+                    f"{prob_bar_html(prob, color)}"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
 
-                res_col, detail_col = st.columns(2)
-                with res_col:
-                    st.markdown("**Primary Prediction**")
-                    st.markdown(badge_html(pred_class), unsafe_allow_html=True)
-                    st.markdown(
-                        f'<p style="color:#94a3b8;margin:4px 0;">'
-                        f'{CLASS_DESC.get(pred_class, "")}</p>',
-                        unsafe_allow_html=True,
+        st.markdown("---")
+        st.markdown(
+            '<div class="section-header">Per-Window Probability Distribution</div>',
+            unsafe_allow_html=True,
+        )
+        try:
+            import plotly.graph_objects as go
+
+            fig2 = go.Figure()
+            win_idx = list(range(len(all_probs)))
+            for i, cls in enumerate(CLASS_NAMES):
+                fig2.add_trace(
+                    go.Scatter(
+                        x=win_idx,
+                        y=all_probs[:, i],
+                        mode="lines",
+                        name=cls,
+                        line=dict(color=list(CLASS_COLORS.values())[i], width=2),
+                        fill="tozeroy",
+                        opacity=0.3,
                     )
-                    st.markdown(
-                        f'<p style="color:#38bdf8;font-size:2rem;font-weight:700;margin:0;">'
-                        f"{pred_conf:.1%}</p>",
-                        unsafe_allow_html=True,
-                    )
-                    st.caption(f"Windows analysed: {len(X_wins)}")
-
-                with detail_col:
-                    st.markdown("**Class Probabilities**")
-                    for i, cls in enumerate(CLASS_NAMES):
-                        color = CLASS_COLORS[cls]
-                        prob = float(mean_probs[i])
-                        st.markdown(
-                            f'<div style="display:flex;align-items:center;gap:8px;margin:6px 0;">'
-                            f'<span style="color:{color};font-weight:600;min-width:160px;">{cls}</span>'
-                            f"{prob_bar_html(prob, color)}"
-                            f"</div>",
-                            unsafe_allow_html=True,
-                        )
-
-                st.markdown("---")
-                st.markdown(
-                    '<div class="section-header">Per-Window Probability Distribution</div>',
-                    unsafe_allow_html=True,
                 )
-                try:
-                    import plotly.graph_objects as go  # noqa: F811
-
-                    fig2 = go.Figure()
-                    win_idx = list(range(len(all_probs)))
-                    for i, cls in enumerate(CLASS_NAMES):
-                        fig2.add_trace(
-                            go.Scatter(
-                                x=win_idx,
-                                y=all_probs[:, i],
-                                mode="lines",
-                                name=cls,
-                                line=dict(
-                                    color=list(CLASS_COLORS.values())[i], width=2
-                                ),
-                                fill="tozeroy",
-                                opacity=0.3,
-                            )
-                        )
-                    fig2.update_layout(
-                        paper_bgcolor="#0f172a",
-                        plot_bgcolor="#0f172a",
-                        font=dict(color="#94a3b8"),
-                        xaxis=dict(title="Window Index", gridcolor="#1e293b"),
-                        yaxis=dict(
-                            title="Probability",
-                            tickformat=".0%",
-                            gridcolor="#1e293b",
-                            range=[0, 1],
-                        ),
-                        legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
-                        margin=dict(l=10, r=10, t=20, b=10),
-                        height=280,
-                    )
-                    st.plotly_chart(fig2, use_container_width=True)
-                except ImportError:
-                    st.line_chart(pd.DataFrame(all_probs, columns=CLASS_NAMES))
-
-                st.markdown("---")
-                st.markdown(
-                    '<div class="section-header">Probability Summary</div>',
-                    unsafe_allow_html=True,
-                )
-                summary_df = pd.DataFrame(
-                    {
-                        "Fault Class": CLASS_NAMES,
-                        "Mean Prob": [f"{p:.2%}" for p in mean_probs],
-                        "Max Prob": [f"{p:.2%}" for p in all_probs.max(axis=0)],
-                        "Min Prob": [f"{p:.2%}" for p in all_probs.min(axis=0)],
-                        "Description": [CLASS_DESC[c] for c in CLASS_NAMES],
-                    }
-                ).sort_values("Mean Prob", ascending=False)
-                st.dataframe(summary_df, hide_index=True, use_container_width=True)
-
-                report_dict = {
-                    "file": fname,
-                    "prediction": pred_class,
-                    "confidence": f"{pred_conf:.4f}",
-                    "windows_analyzed": int(len(X_wins)),
-                    "class_probabilities": {
-                        cls: f"{float(mean_probs[i]):.6f}"
-                        for i, cls in enumerate(CLASS_NAMES)
-                    },
-                }
-                all_reports.append(report_dict)
-                st.download_button(
-                    label="⬇️  Download Report (JSON)",
-                    data=json.dumps(report_dict, indent=2, ensure_ascii=False),
-                    file_name=f"pmu_report_{fname}.json",
-                    mime="application/json",
-                    key=f"dl_{fname}",
-                )
-
-        # ── Batch download (multi-file only) ─────────────
-        if len(all_reports) > 1:
-            st.markdown("---")
-            st.download_button(
-                label=f"⬇️  Download All {len(all_reports)} Reports (JSON)",
-                data=json.dumps(all_reports, indent=2, ensure_ascii=False),
-                file_name="pmu_batch_report.json",
-                mime="application/json",
-                type="primary",
+            fig2.update_layout(
+                paper_bgcolor="#0f172a",
+                plot_bgcolor="#0f172a",
+                font=dict(color="#94a3b8"),
+                xaxis=dict(title="Window Index", gridcolor="#1e293b"),
+                yaxis=dict(
+                    title="Probability",
+                    tickformat=".0%",
+                    gridcolor="#1e293b",
+                    range=[0, 1],
+                ),
+                legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                margin=dict(l=10, r=10, t=20, b=10),
+                height=280,
             )
+            st.plotly_chart(fig2, use_container_width=True)
+        except ImportError:
+            st.line_chart(pd.DataFrame(all_probs, columns=CLASS_NAMES))
+
+        st.markdown("---")
+        st.markdown(
+            '<div class="section-header">Probability Summary</div>',
+            unsafe_allow_html=True,
+        )
+        summary_df = pd.DataFrame(
+            {
+                "Fault Class": CLASS_NAMES,
+                "Mean Prob": [f"{p:.2%}" for p in mean_probs],
+                "Max Prob": [f"{p:.2%}" for p in all_probs.max(axis=0)],
+                "Min Prob": [f"{p:.2%}" for p in all_probs.min(axis=0)],
+                "Description": [CLASS_DESC[c] for c in CLASS_NAMES],
+            }
+        ).sort_values("Mean Prob", ascending=False)
+        st.dataframe(summary_df, hide_index=True, use_container_width=True)
+
+        result_dict = {
+            "file": uploaded.name,
+            "prediction": pred_class,
+            "confidence": f"{pred_conf:.4f}",
+            "windows_analyzed": int(len(X_wins)),
+            "class_probabilities": {
+                cls: f"{float(mean_probs[i]):.6f}" for i, cls in enumerate(CLASS_NAMES)
+            },
+        }
+        st.download_button(
+            label="⬇️  Download Report (JSON)",
+            data=json.dumps(result_dict, indent=2, ensure_ascii=False),
+            file_name=f"pmu_fault_report_{uploaded.name}.json",
+            mime="application/json",
+        )
