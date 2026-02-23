@@ -178,33 +178,15 @@ def per_class_accuracy(model, loader, device, num_classes: int):
 def main():
     parser = argparse.ArgumentParser(description="PMU Fault Classifier — Training")
     parser.add_argument(
+        "--config", default="configs/train_config.yaml", help="Path to YAML config file"
+    )
+    parser.add_argument(
         "--model",
         default=None,
         choices=["TCN", "LSTM", "Transformer"],
         help="Override model type",
     )
-    parser.add_argument(
-        "--run-name",
-        default=None,
-        dest="run_name",
-        help=(
-            "Name for this training run (saved to logs/checkpoints/<run_name>). "
-            "Defaults to current timestamp: YYYY-MM-DD-HH-MM"
-        ),
-    )
     args = parser.parse_args()
-
-    # ── Resolve run name & output paths ──
-    run_name = args.run_name or datetime.now().strftime("%Y-%m-%d-%H-%M")
-    paths = run_paths(run_name)
-    RUN_CKPT_DIR = paths["ckpt_dir"]
-    NORMALIZER_NPZ = paths["normalizer_npz"]
-    BEST_MODEL_PT = paths["best_model_pt"]
-    TRAINING_HISTORY_JSON = paths["training_history_json"]
-    CLASS_ACC_JSON = paths["class_acc_json"]
-    MODEL_META_JSON = paths["model_meta_json"]
-    CONFUSION_MATRIX_JSON = paths["confusion_matrix_json"]
-    TSNE_EMBEDDINGS_JSON = paths["tsne_embeddings_json"]
 
     config_path = TRAIN_CONFIG_YAML
     cfg = load_config(config_path)
@@ -237,7 +219,7 @@ def main():
     print(f"  Input features: {F}")
 
     # Save normalizer
-    RUN_CKPT_DIR.mkdir(parents=True, exist_ok=True)
+    CKPT_DIR.mkdir(parents=True, exist_ok=True)
     normalizer.save(NORMALIZER_NPZ)
     print(f"  Saved normalizer → {NORMALIZER_NPZ}\n")
 
@@ -379,9 +361,9 @@ def main():
     all_preds, all_true = collect_predictions(model, val_loader, device)
     save_confusion_matrix(all_true, all_preds, CLASS_NAMES, CONFUSION_MATRIX_JSON)
     save_tsne_embeddings(model, val_loader, device, CLASS_NAMES, TSNE_EMBEDDINGS_JSON)
-    print(f"  Saved confusion matrix & embeddings → {RUN_CKPT_DIR}")
+    print(f"  Saved confusion matrix & embeddings → {CKPT_DIR}")
 
-    print(f"\n  Checkpoints saved to: {RUN_CKPT_DIR}")
+    print(f"\n  Checkpoints saved to: {CKPT_DIR}")
     print(f"{'='*60}\n")
 
 

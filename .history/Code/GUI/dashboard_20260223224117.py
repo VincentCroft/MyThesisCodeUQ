@@ -127,7 +127,6 @@ PYTHON_EXE = sys.executable
 #  Run management helpers
 # ════════════════════════════════════════════════════════════
 
-
 def list_runs() -> list[str]:
     """Return all run names that have a valid best_model.pt, newest first."""
     if not CKPT_BASE_DIR.exists():
@@ -146,7 +145,6 @@ def get_run_paths(run_name: str) -> dict:
 # ════════════════════════════════════════════════════════════
 #  Legacy helpers (operate on a given paths-dict)
 # ════════════════════════════════════════════════════════════
-
 
 def load_cfg() -> dict:
     with open(CONFIG_PATH) as f:
@@ -200,43 +198,17 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.markdown("---")
-
-    # ── Active run selector ──────────────────────────────
-    st.markdown("**Active Run**")
-    all_runs = list_runs()
-    if all_runs:
-        selected_run = st.selectbox(
-            "Select checkpoint run",
-            all_runs,
-            index=0,
-            label_visibility="collapsed",
-            help="Choose which trained model to use for Analysis and Inference.",
-        )
-    else:
-        selected_run = None
-        st.caption("No trained runs yet.")
-
-    # Store in session state so pages can access it
-    st.session_state["selected_run"] = selected_run
-
-    st.markdown("---")
     st.markdown("**Model Status**")
-    if selected_run:
-        rp = get_run_paths(selected_run)
-        if model_ready(rp):
-            st.success(f"✅  Run: `{selected_run}`")
-            meta_path = rp["model_meta_json"]
-            if meta_path.exists():
-                meta = json.loads(meta_path.read_text())
-                st.caption(
-                    f"Type: **{meta.get('model_type', '?')}**  |  "
-                    f"Classes: **{meta.get('num_classes', '?')}**"
-                )
-        else:
-            st.warning("⚠️  Run folder incomplete")
+    if model_exists():
+        st.success("✅  Model ready")
+        if META_PATH.exists():
+            meta = json.loads(META_PATH.read_text())
+            st.caption(
+                f"Type: **{meta.get('model_type', '?')}**  |  "
+                f"Classes: **{meta.get('num_classes', '?')}**"
+            )
     else:
         st.warning("⚠️  Not trained yet")
-
     st.markdown("---")
     st.caption("Protocol v1.2  ·  PyTorch  ·  Streamlit")
 
@@ -263,15 +235,10 @@ if page == "🏠  Home":
     with col3:
         st.metric("Feature Dimensions", "14")
     with col4:
-        runs = list_runs()
-        if runs:
-            rp = get_run_paths(runs[0])
-            hist = load_history(rp)
-            if hist:
-                best = max(hist["val_acc"])
-                st.metric("Best Val Accuracy", f"{best:.2%}")
-            else:
-                st.metric("Best Val Accuracy", "—")
+        hist = load_history()
+        if hist:
+            best = max(hist["val_acc"])
+            st.metric("Best Val Accuracy", f"{best:.2%}")
         else:
             st.metric("Best Val Accuracy", "—")
 
@@ -318,8 +285,7 @@ if page == "🏠  Home":
         '<div class="section-header">Training History</div>',
         unsafe_allow_html=True,
     )
-    _home_runs = list_runs()
-    hist = load_history(get_run_paths(_home_runs[0])) if _home_runs else None
+    hist = load_history()
     if hist:
         try:
             import plotly.graph_objects as go
@@ -478,34 +444,14 @@ elif page == "🚀  Train":
 
     st.markdown("---")
 
-    # ── Run name ─────────────────────────────────────────
-    from datetime import datetime as _dt
-
-    default_run_name = _dt.now().strftime("%Y-%m-%d-%H-%M")
-    run_name_input = st.text_input(
-        "Run Name  (leave blank for timestamp default)",
-        value="",
-        placeholder=default_run_name,
-        help=(
-            "Checkpoints will be saved to  logs/checkpoints/<run_name>/. "
-            "If left blank the current timestamp is used automatically."
-        ),
-    )
-    run_name_final = run_name_input.strip() or default_run_name
-
     col_btn, col_info = st.columns([1, 2])
     with col_btn:
         start_btn = st.button(
             "▶️  Start Training", use_container_width=True, type="primary"
         )
     with col_info:
-        existing = list_runs()
-        if run_name_final in existing:
-            st.warning(
-                f"⚠️  Run **{run_name_final}** already exists — it will be overwritten."
-            )
-        elif existing:
-            st.info(f"ℹ️  Will save to  `logs/checkpoints/{run_name_final}/`")
+        if model_exists():
+            st.info("ℹ️  A trained model already exists. Training will overwrite it.")
 
     log_placeholder = st.empty()
     metric_placeholder = st.empty()
@@ -515,10 +461,10 @@ elif page == "🚀  Train":
         cmd = [
             PYTHON_EXE,
             str(train_script),
+            "--config",
+            str(CONFIG_PATH),
             "--model",
             cfg["model"]["type"],
-            "--run-name",
-            run_name_final,
         ]
 
         log_lines: list[str] = []
@@ -573,18 +519,14 @@ elif page == "🚀  Train":
             unsafe_allow_html=True,
         )
 
-        _finished_rp = get_run_paths(run_name_final)
-        hist_fin = load_history(_finished_rp)
-        if hist_fin:
-            best_val = max(hist_fin["val_acc"])
+        hist = load_history()
+        if hist:
+            best_val = max(hist["val_acc"])
             m1, m2, m3 = metric_placeholder.columns(3)
             m1.metric("Best Val Accuracy", f"{best_val:.2%}")
-            m2.metric("Total Epochs", f"{len(hist_fin['val_acc'])}")
-            m3.metric("Final Val Loss", f"{hist_fin['val_loss'][-1]:.4f}")
+            m2.metric("Total Epochs", f"{len(hist['val_acc'])}")
+            m3.metric("Final Val Loss", f"{hist['val_loss'][-1]:.4f}")
         st.balloons()
-        st.info(
-            f"✅  Run **{run_name_final}** saved. Select it from the sidebar to analyse."
-        )
 
 
 # ════════════════════════════════════════════════════════════
@@ -599,21 +541,11 @@ elif page == "📈  Analysis":
     )
     st.markdown("---")
 
-    _sel_run = st.session_state.get("selected_run")
-    if not _sel_run:
+    if not model_exists():
         st.error(
-            "No trained run found. Please complete training on the Train page first."
+            "No trained model found. Please complete training on the Train page first."
         )
         st.stop()
-
-    _rp = get_run_paths(_sel_run)
-    if not model_ready(_rp):
-        st.error(f"Run **{_sel_run}** is missing model files. Please re-run training.")
-        st.stop()
-
-    st.info(f"📂  Analysing run: **{_sel_run}**  (change in the sidebar)")
-    CM_PATH = _rp["confusion_matrix_json"]
-    TSNE_PATH = _rp["tsne_embeddings_json"]
 
     try:
         import plotly.graph_objects as go
@@ -640,7 +572,7 @@ elif page == "📈  Analysis":
             '<div class="section-header">Training / Validation Fit Curves</div>',
             unsafe_allow_html=True,
         )
-        hist = load_history(_rp)
+        hist = load_history()
         if not hist:
             st.info("No training history available. Train the model first.")
         else:
@@ -1130,41 +1062,33 @@ elif page == "🔍  Inference":
     )
     st.markdown("---")
 
-    _sel_run = st.session_state.get("selected_run")
-    if not _sel_run:
+    if not model_exists():
         st.error(
-            "No trained run found. Please complete training on the Train page first."
+            "No trained model found. "
+            "Please complete training on the Train page first."
         )
         st.stop()
 
-    _rp = get_run_paths(_sel_run)
-    if not model_ready(_rp):
-        st.error(f"Run **{_sel_run}** is missing model files. Please re-run training.")
-        st.stop()
-
-    st.info(f"📂  Using run: **{_sel_run}**  (change in the sidebar)")
-
-    @st.cache_resource(show_spinner="Loading model…")
-    def load_inference_engine(run_name: str):
+    @st.cache_resource
+    def load_inference_engine():
         import torch
-        from models.feature_engineering import FeatureNormalizer
+        from models.feature_engineering import FeatureNormalizer, load_inference_csv
         from models.classifier import build_model
 
-        rp = get_run_paths(run_name)
-        meta = json.loads(rp["model_meta_json"].read_text())
-        ckpt = torch.load(rp["best_model_pt"], map_location="cpu")
+        meta = json.loads(META_PATH.read_text())
+        ckpt = torch.load(BEST_MODEL, map_location="cpu")
         cfg = ckpt["cfg"]
         cfg["model"]["input_size"] = meta["input_size"]
 
-        mdl = build_model(cfg)
-        mdl.load_state_dict(ckpt["model_state"])
-        mdl.eval()
+        model = build_model(cfg)
+        model.load_state_dict(ckpt["model_state"])
+        model.eval()
 
-        normalizer = FeatureNormalizer.load(rp["normalizer_npz"])
-        return mdl, normalizer, cfg
+        normalizer = FeatureNormalizer.load(NORMALIZER)
+        return model, normalizer, cfg
 
     try:
-        model, normalizer, inf_cfg = load_inference_engine(_sel_run)
+        model, normalizer, inf_cfg = load_inference_engine()
     except Exception as e:
         st.error(f"Failed to load model: {e}")
         st.stop()
