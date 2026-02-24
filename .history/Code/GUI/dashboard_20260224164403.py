@@ -152,83 +152,33 @@ _SLIDING_PILL_JS = """
     }, 60);
   }
 
-  // ─── Sidebar nav (intercept clicks → no full reload) ─────
-  function hideTriggerBtns() {
-    var names = ['Home', 'Train', 'Analysis', 'Inference'];
-    var sidebar = doc.querySelector('[data-testid="stSidebar"]');
-    if (!sidebar) return;
-    // Buttons are now rendered BEFORE the nav --- divider, so collapsing them
-    // only removes space above the nav, never below it.
-    sidebar.querySelectorAll('.stButton').forEach(function (wrap) {
-      var btn = wrap.querySelector('button');
-      if (btn && names.indexOf(btn.innerText.trim()) !== -1) {
-        wrap.style.cssText = 'position:absolute!important;width:0!important;' +
-          'height:0!important;overflow:hidden!important;opacity:0!important;' +
-          'pointer-events:none!important;padding:0!important;margin:0!important;' +
-          'border:none!important;min-height:0!important';
-        var el = wrap.parentElement;
-        for (var i = 0; i < 8 && el && el !== sidebar; i++) {
-          if (el.classList.contains('element-container')) {
-            el.style.cssText = 'height:0!important;min-height:0!important;' +
-              'overflow:hidden!important;padding:0!important;margin:0!important';
-          }
-          el = el.parentElement;
-        }
-      }
-    });
-  }
-
+  // ─── Sidebar nav ─────────────────────────────────────────
   function setupNav(nav) {
     var pill = createPill(nav);
     function upd(anim) {
       var a = nav.querySelector('.nav-active');
       if (a) movePill(pill, a, nav, anim);
     }
-
-    // Attach click interceptors once
-    nav.querySelectorAll('.nav-item').forEach(function (a) {
-      a.addEventListener('click', function (e) {
-        e.preventDefault();
-        var target = a.getAttribute('data-page');
-        // Visually update active state immediately
-        nav.querySelectorAll('.nav-item').forEach(function (item) {
-          item.classList.toggle('nav-active', item.getAttribute('data-page') === target);
-        });
-        upd(true);
-        // Click the hidden Streamlit button (triggers rerun, no browser reload)
-        var sidebar = doc.querySelector('[data-testid="stSidebar"]');
-        if (sidebar) {
-          sidebar.querySelectorAll('.stButton button').forEach(function (btn) {
-            if (btn.innerText.trim() === target) btn.click();
-          });
-        }
-      });
-    });
-
     upd(false);
-    hideTriggerBtns(); // immediate first pass
     setTimeout(function () {
-      hideTriggerBtns();
       nav.classList.add('sp-ready');
-      // Re-hide on any DOM change (Streamlit rerenders sidebar on rerun)
-      new MutationObserver(function () {
-        hideTriggerBtns();
-        upd(false);
-      }).observe(nav, {
-        childList: true, subtree: true, attributes: true,
-        attributeFilter: ['class'],
-      });
-    }, 100);
+      new MutationObserver(function () { upd(true); })
+        .observe(nav, { childList: true, subtree: true, attributes: true,
+                        attributeFilter: ['class'] });
+    }, 60);
   }
 
   var seen = new WeakSet();
   function scan() {
+    // tab lists
     doc.querySelectorAll('.stTabs [data-baseweb="tab-list"]').forEach(function (el) {
       if (!seen.has(el)) { seen.add(el); setupTabList(el); }
     });
+    // radio groups: target the inner flex container
     doc.querySelectorAll('[data-testid="stRadio"] > div:last-child').forEach(function (el) {
       if (!seen.has(el)) { seen.add(el); setupRadio(el); }
     });
+    // sidebar nav
     doc.querySelectorAll('.sidebar-nav').forEach(function (el) {
       if (!seen.has(el)) { seen.add(el); setupNav(el); }
     });
@@ -236,24 +186,6 @@ _SLIDING_PILL_JS = """
 
   new MutationObserver(scan).observe(doc.body, { childList: true, subtree: true });
   scan();
-
-  // Extra: keep trigger buttons hidden whenever sidebar DOM changes
-  (function () {
-    var sidebar = doc.querySelector('[data-testid="stSidebar"]');
-    if (sidebar) {
-      new MutationObserver(hideTriggerBtns).observe(sidebar, { childList: true, subtree: true });
-    } else {
-      // Wait for sidebar to appear
-      var ob = new MutationObserver(function () {
-        var s = doc.querySelector('[data-testid="stSidebar"]');
-        if (s) {
-          ob.disconnect();
-          new MutationObserver(hideTriggerBtns).observe(s, { childList: true, subtree: true });
-        }
-      });
-      ob.observe(doc.body, { childList: true, subtree: true });
-    }
-  })();
 })();
 </script>
 """
@@ -592,16 +524,9 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    # Hidden trigger buttons — placed BEFORE the divider so JS collapsing
-    # leaves zero space between the nav and the next section.
-    _nav_options = ["Home", "Train", "Analysis", "Inference"]
-    for _name in _nav_options:
-        if st.button(_name, key=f"_nav_{_name}", use_container_width=False):
-            st.session_state["page"] = _name
-            st.rerun()
-
     st.markdown("---")
     _cur = st.session_state["page"]
+    _nav_options = ["Home", "Train", "Analysis", "Inference"]
     _items_html = ""
     for _name in _nav_options:
         _active_cls = " nav-active" if _name == _cur else ""
@@ -613,6 +538,13 @@ with st.sidebar:
         f'<nav class="sidebar-nav" id="sidebar-nav">\n{_items_html}</nav>',
         unsafe_allow_html=True,
     )
+    # Hidden trigger buttons — JS will click these; CSS hides them visually
+    st.markdown('<div class="_nav-hidden-btns">', unsafe_allow_html=True)
+    for _name in _nav_options:
+        if st.button(_name, key=f"_nav_{_name}", use_container_width=False):
+            st.session_state["page"] = _name
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
     page = st.session_state["page"]
     st.markdown("---")
 

@@ -157,23 +157,12 @@ _SLIDING_PILL_JS = """
     var names = ['Home', 'Train', 'Analysis', 'Inference'];
     var sidebar = doc.querySelector('[data-testid="stSidebar"]');
     if (!sidebar) return;
-    // Buttons are now rendered BEFORE the nav --- divider, so collapsing them
-    // only removes space above the nav, never below it.
     sidebar.querySelectorAll('.stButton').forEach(function (wrap) {
       var btn = wrap.querySelector('button');
       if (btn && names.indexOf(btn.innerText.trim()) !== -1) {
-        wrap.style.cssText = 'position:absolute!important;width:0!important;' +
-          'height:0!important;overflow:hidden!important;opacity:0!important;' +
-          'pointer-events:none!important;padding:0!important;margin:0!important;' +
-          'border:none!important;min-height:0!important';
-        var el = wrap.parentElement;
-        for (var i = 0; i < 8 && el && el !== sidebar; i++) {
-          if (el.classList.contains('element-container')) {
-            el.style.cssText = 'height:0!important;min-height:0!important;' +
-              'overflow:hidden!important;padding:0!important;margin:0!important';
-          }
-          el = el.parentElement;
-        }
+        wrap.style.cssText = 'position:absolute!important;width:1px!important;' +
+          'height:1px!important;overflow:hidden!important;opacity:0!important;' +
+          'pointer-events:none!important;clip:rect(0,0,0,0)!important;margin:0!important';
       }
     });
   }
@@ -592,16 +581,9 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    # Hidden trigger buttons — placed BEFORE the divider so JS collapsing
-    # leaves zero space between the nav and the next section.
-    _nav_options = ["Home", "Train", "Analysis", "Inference"]
-    for _name in _nav_options:
-        if st.button(_name, key=f"_nav_{_name}", use_container_width=False):
-            st.session_state["page"] = _name
-            st.rerun()
-
     st.markdown("---")
     _cur = st.session_state["page"]
+    _nav_options = ["Home", "Train", "Analysis", "Inference"]
     _items_html = ""
     for _name in _nav_options:
         _active_cls = " nav-active" if _name == _cur else ""
@@ -613,6 +595,13 @@ with st.sidebar:
         f'<nav class="sidebar-nav" id="sidebar-nav">\n{_items_html}</nav>',
         unsafe_allow_html=True,
     )
+    # Hidden trigger buttons — JS will click these; CSS hides them visually
+    st.markdown('<div class="_nav-hidden-btns">', unsafe_allow_html=True)
+    for _name in _nav_options:
+        if st.button(_name, key=f"_nav_{_name}", use_container_width=False):
+            st.session_state["page"] = _name
+            st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
     page = st.session_state["page"]
     st.markdown("---")
 

@@ -168,7 +168,8 @@ _SLIDING_PILL_JS = """
           'border:none!important;min-height:0!important';
         var el = wrap.parentElement;
         for (var i = 0; i < 8 && el && el !== sidebar; i++) {
-          if (el.classList.contains('element-container')) {
+          if (el.classList.contains('element-container') ||
+              el.classList.contains('stVerticalBlock')) {
             el.style.cssText = 'height:0!important;min-height:0!important;' +
               'overflow:hidden!important;padding:0!important;margin:0!important';
           }
