@@ -23,7 +23,6 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as _components
 import yaml
 
 # ── Path setup ──────────────────────────────────────────────
@@ -122,180 +121,6 @@ CLASS_DESC = {
     "THREE_PHASE_FAULT": "Three-phase short-circuit  (ERROR 204)",
 }
 PYTHON_EXE = sys.executable
-
-
-# ════════════════════════════════════════════════════════════
-#  Plotly iframe renderer  (eliminates Streamlit re-render
-#  flicker and enables proper legend toggle behaviour)
-# ════════════════════════════════════════════════════════════
-_PLOTLY_RENDER_COUNTER: list[int] = [0]  # mutable counter for unique div ids
-
-
-def render_plotly(fig, height: int = 400, key: str = "") -> None:
-    """Render a Plotly figure inside a stable <iframe> via components.html().
-
-    Benefits vs st.plotly_chart():
-    • The iframe is an independent document — Streamlit's Virtual-DOM
-      diffing never touches its interior, so legend clicks / trace
-      isolation never cause a page re-render / flicker.
-    • displaylogo=false  removes the "Produced with Plotly" button.
-    • A custom full-screen button is injected into the modebar.
-    """
-    import plotly.io as _pio
-    import copy as _copy
-
-    _PLOTLY_RENDER_COUNTER[0] += 1
-    div_id = f"plotly_div_{_PLOTLY_RENDER_COUNTER[0]}_{key}"
-
-    # ── Post-process figure layout ───────────────────────────────────────
-    fig2 = _copy.deepcopy(fig)
-    lay = fig2.layout
-
-    # 1. All cartesian axes: automargin + standoff so titles don't overlap
-    for _ak in (
-        "xaxis", "yaxis",
-        "xaxis2", "yaxis2",
-        "xaxis3", "yaxis3",
-        "xaxis4", "yaxis4",
-    ):
-        _ax = getattr(lay, _ak, None)
-        if _ax is None:
-            continue
-        _ax.automargin = True
-        try:
-            if _ax.title:
-                _ax.title.standoff = 16
-        except Exception:
-            pass
-
-    # 2. Margins — let Plotly auto-calculate right margin to fit legend
-    _prev_t = None
-    try:
-        _prev_t = lay.margin.t
-    except Exception:
-        pass
-    lay.margin = dict(
-        l=75,
-        t=(_prev_t or 50),
-        b=60,
-        pad=4,
-    )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
-
-    # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
-    lay.autosize = True
-    lay.width = None   # placeholder; JS will fill this before newPlot
-    lay.height = height
-
-    fig_json = _pio.to_json(fig2, validate=False)
-
-    # iframe height = chart height + modebar (30) + small safety pad (6)
-    iframe_h = height + 36
-
-    html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-<style>
-  * {{ margin:0; padding:0; box-sizing:border-box; }}
-  html, body {{
-    background: #0f172a;
-    width: 100%; height: 100%;
-    overflow: hidden;
-  }}
-  #pw {{
-    position: absolute;
-    inset: 0;
-  }}
-</style>
-</head>
-<body>
-<div id="pw">
-  <div id="{div_id}" style="width:100%;height:100%;"></div>
-</div>
-<script>
-(function(){{
-  var fig   = {fig_json};
-  var divId = '{div_id}';
-  var normH = {height};
-  var pw    = document.getElementById('pw');
-
-  /* Measure container width BEFORE newPlot so margin.r is respected */
-  function containerW() {{ return pw.clientWidth || window.innerWidth; }}
-
-  /* Initial plot with explicit width — autosize:true guarantees margin.r is calculated */
-  fig.layout.width  = containerW();
-  fig.layout.autosize = true;
-
-  var cfg = {{
-    displaylogo:  false,
-    responsive:   false,   /* we manage resize manually via ResizeObserver */
-    modeBarButtonsToRemove: [],
-    modeBarButtonsToAdd: [{{
-      name: 'Full screen',
-      icon: {{
-        width: 500, height: 500,
-        path: 'M 0 0 L 180 0 L 180 60 L 60 60 L 60 180 L 0 180 Z '
-            + 'M 320 0 L 500 0 L 500 180 L 440 180 L 440 60 L 320 60 Z '
-            + 'M 0 320 L 60 320 L 60 440 L 180 440 L 180 500 L 0 500 Z '
-            + 'M 440 320 L 500 320 L 500 500 L 320 500 L 320 440 L 440 440 Z',
-        ascent: 500, descent: 0,
-      }},
-      click: function() {{
-        var isFS = !!(document.fullscreenElement
-                   || document.webkitFullscreenElement
-                   || document.mozFullScreenElement);
-        var doc  = document.documentElement;
-        if (!isFS) {{
-          /* Enter fullscreen first; relayout AFTER the transition */
-          var req = doc.requestFullscreen || doc.webkitRequestFullscreen
-                 || doc.mozRequestFullScreen || doc.msRequestFullscreen;
-          if (req) req.call(doc).catch(function(){{}});
-        }} else {{
-          var exit = document.exitFullscreen || document.webkitExitFullscreen
-                  || document.mozCancelFullScreen || document.msExitFullscreen;
-          if (exit) exit.call(document).catch(function(){{}});
-        }}
-      }}
-    }}],
-  }};
-
-  Plotly.newPlot(divId, fig.data, fig.layout, cfg);
-
-  /* Fullscreen change — relayout AFTER browser has resized the viewport */
-  function onFSChange() {{
-    var inFS = !!(document.fullscreenElement
-              || document.webkitFullscreenElement
-              || document.mozFullScreenElement);
-    if (inFS) {{
-      Plotly.relayout(divId, {{ width: screen.width, height: screen.height }});
-    }} else {{
-      Plotly.relayout(divId, {{ width: containerW(), height: normH }});
-    }}
-  }}
-  document.addEventListener('fullscreenchange',       onFSChange);
-  document.addEventListener('webkitfullscreenchange', onFSChange);
-  document.addEventListener('mozfullscreenchange',    onFSChange);
-  document.addEventListener('MSFullscreenChange',     onFSChange);
-
-  /* Track Streamlit column width changes */
-  if (window.ResizeObserver) {{
-    var ro = new ResizeObserver(function() {{
-      var inFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
-      if (!inFS) Plotly.relayout(divId, {{ width: containerW() }});
-    }});
-    ro.observe(pw);
-  }}
-}})();
-</script>
-</body>
-</html>
-"""
-    _components.html(html, height=iframe_h, scrolling=False)
 
 
 # ════════════════════════════════════════════════════════════
@@ -539,7 +364,7 @@ if page == "🏠  Home":
                 paper_bgcolor="#0f172a",
                 plot_bgcolor="#0f172a",
                 font=dict(color="#94a3b8"),
-                legend=dict(bgcolor="#1e293b", bordercolor="#334155", x=1.1),
+                legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
                 yaxis=dict(
                     title="Accuracy",
                     tickformat=".0%",
@@ -1018,9 +843,9 @@ elif page == "📈  Analysis":
 
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    render_plotly(fig_acc, 300, "train_acc")
+                    st.plotly_chart(fig_acc, use_container_width=True)
                 with col_b:
-                    render_plotly(fig_loss, 300, "train_loss")
+                    st.plotly_chart(fig_loss, use_container_width=True)
             else:
                 st.line_chart(
                     {"Train Acc": hist["train_acc"], "Val Acc": hist["val_acc"]}
@@ -1071,7 +896,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=250,
                 )
-                render_plotly(fig_gap, 250, "fig_gap")
+                st.plotly_chart(fig_gap, use_container_width=True)
 
             final_gap = gap[-1]
             if final_gap < 3:
@@ -1145,7 +970,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=420,
                 )
-                render_plotly(fig_cm, 420, "fig_cm")
+                st.plotly_chart(fig_cm, use_container_width=True)
             else:
                 df_cm = pd.DataFrame(disp_matrix, index=cls_names, columns=cls_names)
                 st.dataframe(df_cm, use_container_width=True)
@@ -1222,7 +1047,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=380,
                 )
-                render_plotly(radar_fig, 380, "radar_fig")
+                st.plotly_chart(radar_fig, use_container_width=True)
 
                 f1_vals = [per[c]["f1"] for c in cls_names]
                 colors = [CLASS_COLORS.get(c, "#94a3b8") for c in cls_names]
@@ -1246,7 +1071,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=280,
                 )
-                render_plotly(fig_f1, 280, "fig_f1")
+                st.plotly_chart(fig_f1, use_container_width=True)
 
             rows = []
             for cls, m in cm_data["per_class"].items():
@@ -1368,7 +1193,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=520,
                 )
-                render_plotly(fig_tsne, 520, "fig_tsne")
+                st.plotly_chart(fig_tsne, use_container_width=True)
 
                 st.markdown("---")
                 st.markdown(
@@ -1397,7 +1222,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=20, b=10),
                     height=240,
                 )
-                render_plotly(fig_dist, 240, "fig_dist")
+                st.plotly_chart(fig_dist, use_container_width=True)
             else:
                 st.scatter_chart(
                     df_tsne[["x", "y", "label_name"]], x="x", y="y", color="label_name"
@@ -1676,7 +1501,7 @@ elif page == "🔍  Inference":
                         margin=dict(l=10, r=10, t=20, b=10),
                         height=280,
                     )
-                    render_plotly(fig2, 280, "inference_probs")
+                    st.plotly_chart(fig2, use_container_width=True)
                 except ImportError:
                     st.line_chart(pd.DataFrame(all_probs, columns=CLASS_NAMES))
 

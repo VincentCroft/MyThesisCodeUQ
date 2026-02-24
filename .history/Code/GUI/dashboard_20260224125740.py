@@ -227,9 +227,9 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
   /* Measure container width BEFORE newPlot so margin.r is respected */
   function containerW() {{ return pw.clientWidth || window.innerWidth; }}
 
-  /* Initial plot with explicit width — autosize:true guarantees margin.r is calculated */
+  /* Initial plot with explicit width — autosize:false guarantees margin.r=160 */
   fig.layout.width  = containerW();
-  fig.layout.autosize = true;
+  fig.layout.autosize = false;
 
   var cfg = {{
     displaylogo:  false,

@@ -168,7 +168,7 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         except Exception:
             pass
 
-    # 2. Margins — let Plotly auto-calculate right margin to fit legend
+    # 2. Margins — explicitly set right margin to ensure legend is never clipped
     _prev_t = None
     try:
         _prev_t = lay.margin.t
@@ -176,15 +176,14 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         pass
     lay.margin = dict(
         l=75,
+        r=180,  # 180px guarantees enough space for "THREE_PHASE_FAULT"
         t=(_prev_t or 50),
         b=60,
         pad=4,
     )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
 
     # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
+    #    autosize=True ensures Plotly calculates the plot area correctly.
     lay.autosize = True
     lay.width = None   # placeholder; JS will fill this before newPlot
     lay.height = height

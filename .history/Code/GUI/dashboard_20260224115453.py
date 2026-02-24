@@ -140,6 +140,8 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
       isolation never cause a page re-render / flicker.
     • displaylogo=false  removes the "Produced with Plotly" button.
     • A custom full-screen button is injected into the modebar.
+    • Multi-select legend behaviour is kept (click = toggle one trace,
+      double-click = isolate / restore all).
     """
     import plotly.io as _pio
     import copy as _copy
@@ -151,12 +153,16 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
     fig2 = _copy.deepcopy(fig)
     lay = fig2.layout
 
-    # 1. All cartesian axes: automargin + standoff so titles don't overlap
+    # 1. All cartesian axes: automargin + standoff
     for _ak in (
-        "xaxis", "yaxis",
-        "xaxis2", "yaxis2",
-        "xaxis3", "yaxis3",
-        "xaxis4", "yaxis4",
+        "xaxis",
+        "yaxis",
+        "xaxis2",
+        "yaxis2",
+        "xaxis3",
+        "yaxis3",
+        "xaxis4",
+        "yaxis4",
     ):
         _ax = getattr(lay, _ak, None)
         if _ax is None:
@@ -168,7 +174,9 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         except Exception:
             pass
 
-    # 2. Margins — let Plotly auto-calculate right margin to fit legend
+    # 2. Margins — never touch legend position; just ensure right margin is
+    #    wide enough so the default right-side legend text is never clipped.
+    #    160 px comfortably fits the longest class name "THREE_PHASE_FAULT".
     _prev_t = None
     try:
         _prev_t = lay.margin.t
@@ -176,17 +184,15 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         pass
     lay.margin = dict(
         l=75,
+        r=160,
         t=(_prev_t or 50),
         b=60,
         pad=4,
     )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
 
-    # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
+    # 3. Always autosize — Plotly fills whatever space the container gives
     lay.autosize = True
-    lay.width = None   # placeholder; JS will fill this before newPlot
+    lay.width = None
     lay.height = height
 
     fig_json = _pio.to_json(fig2, validate=False)
@@ -208,6 +214,7 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
     overflow: hidden;
   }}
   #pw {{
+    /* This div is exactly the iframe viewport — Plotly fills it */
     position: absolute;
     inset: 0;
   }}
@@ -219,21 +226,17 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 </div>
 <script>
 (function(){{
-  var fig   = {fig_json};
-  var divId = '{div_id}';
-  var normH = {height};
-  var pw    = document.getElementById('pw');
+  var fig    = {fig_json};
+  var divId  = '{div_id}';
+  var fsH    = screen.height;
+  var fsW    = screen.width;
+  var normH  = {height + _legend_b_extra};
 
-  /* Measure container width BEFORE newPlot so margin.r is respected */
-  function containerW() {{ return pw.clientWidth || window.innerWidth; }}
-
-  /* Initial plot with explicit width — autosize:true guarantees margin.r is calculated */
-  fig.layout.width  = containerW();
-  fig.layout.autosize = true;
-
+  /* Config: responsive=true lets Plotly track the container size.
+     The chart will always fill 100 % of the iframe width.        */
   var cfg = {{
     displaylogo:  false,
-    responsive:   false,   /* we manage resize manually via ResizeObserver */
+    responsive:   true,          // <-- KEY: fills container automatically
     modeBarButtonsToRemove: [],
     modeBarButtonsToAdd: [{{
       name: 'Full screen',
@@ -251,14 +254,16 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
                    || document.mozFullScreenElement);
         var doc  = document.documentElement;
         if (!isFS) {{
-          /* Enter fullscreen first; relayout AFTER the transition */
+          /* pre-size to full screen before entering so no jump */
+          Plotly.relayout(divId, {{ height: fsH }});
           var req = doc.requestFullscreen || doc.webkitRequestFullscreen
                  || doc.mozRequestFullScreen || doc.msRequestFullscreen;
           if (req) req.call(doc).catch(function(){{}});
         }} else {{
+          Plotly.relayout(divId, {{ height: normH }});
           var exit = document.exitFullscreen || document.webkitExitFullscreen
                   || document.mozCancelFullScreen || document.msExitFullscreen;
-          if (exit) exit.call(document).catch(function(){{}});
+          if (exit) exit.call(document);
         }}
       }}
     }}],
@@ -266,30 +271,17 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 
   Plotly.newPlot(divId, fig.data, fig.layout, cfg);
 
-  /* Fullscreen change — relayout AFTER browser has resized the viewport */
+  /* Esc safety net */
   function onFSChange() {{
     var inFS = !!(document.fullscreenElement
               || document.webkitFullscreenElement
               || document.mozFullScreenElement);
-    if (inFS) {{
-      Plotly.relayout(divId, {{ width: screen.width, height: screen.height }});
-    }} else {{
-      Plotly.relayout(divId, {{ width: containerW(), height: normH }});
-    }}
+    if (!inFS) Plotly.relayout(divId, {{ height: normH }});
   }}
   document.addEventListener('fullscreenchange',       onFSChange);
   document.addEventListener('webkitfullscreenchange', onFSChange);
   document.addEventListener('mozfullscreenchange',    onFSChange);
   document.addEventListener('MSFullscreenChange',     onFSChange);
-
-  /* Track Streamlit column width changes */
-  if (window.ResizeObserver) {{
-    var ro = new ResizeObserver(function() {{
-      var inFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
-      if (!inFS) Plotly.relayout(divId, {{ width: containerW() }});
-    }});
-    ro.observe(pw);
-  }}
 }})();
 </script>
 </body>
@@ -539,7 +531,8 @@ if page == "🏠  Home":
                 paper_bgcolor="#0f172a",
                 plot_bgcolor="#0f172a",
                 font=dict(color="#94a3b8"),
-                legend=dict(bgcolor="#1e293b", bordercolor="#334155", x=1.1),
+                legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                margin=dict(l=10, r=10, t=30, b=10),
                 yaxis=dict(
                     title="Accuracy",
                     tickformat=".0%",
@@ -556,7 +549,7 @@ if page == "🏠  Home":
                 xaxis=dict(title="Epoch", gridcolor="#1e293b", color="#94a3b8"),
                 height=320,
             )
-            render_plotly(fig, 320, "home_history")
+            render_plotly(fig, height=320, key="home_history")
         except ImportError:
             st.line_chart({"Val Acc": hist["val_acc"], "Train Acc": hist["train_acc"]})
     else:
@@ -1018,9 +1011,9 @@ elif page == "📈  Analysis":
 
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    render_plotly(fig_acc, 300, "train_acc")
+                    render_plotly(fig_acc, height=300, key="curve_acc")
                 with col_b:
-                    render_plotly(fig_loss, 300, "train_loss")
+                    render_plotly(fig_loss, height=300, key="curve_loss")
             else:
                 st.line_chart(
                     {"Train Acc": hist["train_acc"], "Val Acc": hist["val_acc"]}
@@ -1071,7 +1064,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=250,
                 )
-                render_plotly(fig_gap, 250, "fig_gap")
+                render_plotly(fig_gap, height=250, key="curve_gap")
 
             final_gap = gap[-1]
             if final_gap < 3:
@@ -1145,7 +1138,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=420,
                 )
-                render_plotly(fig_cm, 420, "fig_cm")
+                render_plotly(fig_cm, height=420, key="cm_heatmap")
             else:
                 df_cm = pd.DataFrame(disp_matrix, index=cls_names, columns=cls_names)
                 st.dataframe(df_cm, use_container_width=True)
@@ -1222,7 +1215,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=380,
                 )
-                render_plotly(radar_fig, 380, "radar_fig")
+                render_plotly(radar_fig, height=380, key="report_radar")
 
                 f1_vals = [per[c]["f1"] for c in cls_names]
                 colors = [CLASS_COLORS.get(c, "#94a3b8") for c in cls_names]
@@ -1246,7 +1239,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=280,
                 )
-                render_plotly(fig_f1, 280, "fig_f1")
+                render_plotly(fig_f1, height=280, key="report_f1bar")
 
             rows = []
             for cls, m in cm_data["per_class"].items():
@@ -1368,7 +1361,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=520,
                 )
-                render_plotly(fig_tsne, 520, "fig_tsne")
+                render_plotly(fig_tsne, height=520, key="tsne_scatter")
 
                 st.markdown("---")
                 st.markdown(
@@ -1397,7 +1390,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=20, b=10),
                     height=240,
                 )
-                render_plotly(fig_dist, 240, "fig_dist")
+                render_plotly(fig_dist, height=240, key="tsne_dist_bar")
             else:
                 st.scatter_chart(
                     df_tsne[["x", "y", "label_name"]], x="x", y="y", color="label_name"
@@ -1676,7 +1669,7 @@ elif page == "🔍  Inference":
                         margin=dict(l=10, r=10, t=20, b=10),
                         height=280,
                     )
-                    render_plotly(fig2, 280, "inference_probs")
+                    render_plotly(fig2, height=280, key=f"infer_prob_{fname}")
                 except ImportError:
                     st.line_chart(pd.DataFrame(all_probs, columns=CLASS_NAMES))
 

@@ -168,7 +168,9 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         except Exception:
             pass
 
-    # 2. Margins — let Plotly auto-calculate right margin to fit legend
+    # 2. Margins — never touch legend position; just ensure right margin is
+    #    wide enough so the default right-side legend text is never clipped.
+    #    160 px comfortably fits the longest class name "THREE_PHASE_FAULT".
     _prev_t = None
     try:
         _prev_t = lay.margin.t
@@ -176,16 +178,15 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         pass
     lay.margin = dict(
         l=75,
+        r=160,
         t=(_prev_t or 50),
         b=60,
         pad=4,
     )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
 
     # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
-    lay.autosize = True
+    #    autosize=False ensures Plotly uses our margin.r exactly.
+    lay.autosize = False
     lay.width = None   # placeholder; JS will fill this before newPlot
     lay.height = height
 
@@ -227,9 +228,9 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
   /* Measure container width BEFORE newPlot so margin.r is respected */
   function containerW() {{ return pw.clientWidth || window.innerWidth; }}
 
-  /* Initial plot with explicit width — autosize:true guarantees margin.r is calculated */
+  /* Initial plot with explicit width — autosize:false guarantees margin.r=160 */
   fig.layout.width  = containerW();
-  fig.layout.autosize = true;
+  fig.layout.autosize = false;
 
   var cfg = {{
     displaylogo:  false,

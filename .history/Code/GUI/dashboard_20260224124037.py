@@ -168,7 +168,9 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         except Exception:
             pass
 
-    # 2. Margins — let Plotly auto-calculate right margin to fit legend
+    # 2. Margins — never touch legend position; just ensure right margin is
+    #    wide enough so the default right-side legend text is never clipped.
+    #    160 px comfortably fits the longest class name "THREE_PHASE_FAULT".
     _prev_t = None
     try:
         _prev_t = lay.margin.t
@@ -176,17 +178,15 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         pass
     lay.margin = dict(
         l=75,
+        r=160,
         t=(_prev_t or 50),
         b=60,
         pad=4,
     )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
 
-    # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
+    # 3. Always autosize — Plotly fills whatever space the container gives
     lay.autosize = True
-    lay.width = None   # placeholder; JS will fill this before newPlot
+    lay.width = None
     lay.height = height
 
     fig_json = _pio.to_json(fig2, validate=False)
@@ -219,21 +219,15 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 </div>
 <script>
 (function(){{
-  var fig   = {fig_json};
-  var divId = '{div_id}';
-  var normH = {height};
-  var pw    = document.getElementById('pw');
-
-  /* Measure container width BEFORE newPlot so margin.r is respected */
-  function containerW() {{ return pw.clientWidth || window.innerWidth; }}
-
-  /* Initial plot with explicit width — autosize:true guarantees margin.r is calculated */
-  fig.layout.width  = containerW();
-  fig.layout.autosize = true;
+  var fig    = {fig_json};
+  var divId  = '{div_id}';
+  var fsH    = screen.height;
+  var fsW    = screen.width;
+  var normH  = {height};
 
   var cfg = {{
     displaylogo:  false,
-    responsive:   false,   /* we manage resize manually via ResizeObserver */
+    responsive:   true,
     modeBarButtonsToRemove: [],
     modeBarButtonsToAdd: [{{
       name: 'Full screen',
@@ -251,14 +245,15 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
                    || document.mozFullScreenElement);
         var doc  = document.documentElement;
         if (!isFS) {{
-          /* Enter fullscreen first; relayout AFTER the transition */
+          Plotly.relayout(divId, {{ height: fsH }});
           var req = doc.requestFullscreen || doc.webkitRequestFullscreen
                  || doc.mozRequestFullScreen || doc.msRequestFullscreen;
           if (req) req.call(doc).catch(function(){{}});
         }} else {{
+          Plotly.relayout(divId, {{ height: normH }});
           var exit = document.exitFullscreen || document.webkitExitFullscreen
                   || document.mozCancelFullScreen || document.msExitFullscreen;
-          if (exit) exit.call(document).catch(function(){{}});
+          if (exit) exit.call(document);
         }}
       }}
     }}],
@@ -266,30 +261,16 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 
   Plotly.newPlot(divId, fig.data, fig.layout, cfg);
 
-  /* Fullscreen change — relayout AFTER browser has resized the viewport */
   function onFSChange() {{
     var inFS = !!(document.fullscreenElement
               || document.webkitFullscreenElement
               || document.mozFullScreenElement);
-    if (inFS) {{
-      Plotly.relayout(divId, {{ width: screen.width, height: screen.height }});
-    }} else {{
-      Plotly.relayout(divId, {{ width: containerW(), height: normH }});
-    }}
+    if (!inFS) Plotly.relayout(divId, {{ height: normH }});
   }}
   document.addEventListener('fullscreenchange',       onFSChange);
   document.addEventListener('webkitfullscreenchange', onFSChange);
   document.addEventListener('mozfullscreenchange',    onFSChange);
   document.addEventListener('MSFullscreenChange',     onFSChange);
-
-  /* Track Streamlit column width changes */
-  if (window.ResizeObserver) {{
-    var ro = new ResizeObserver(function() {{
-      var inFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
-      if (!inFS) Plotly.relayout(divId, {{ width: containerW() }});
-    }});
-    ro.observe(pw);
-  }}
 }})();
 </script>
 </body>
@@ -539,7 +520,7 @@ if page == "🏠  Home":
                 paper_bgcolor="#0f172a",
                 plot_bgcolor="#0f172a",
                 font=dict(color="#94a3b8"),
-                legend=dict(bgcolor="#1e293b", bordercolor="#334155", x=1.1),
+                legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
                 yaxis=dict(
                     title="Accuracy",
                     tickformat=".0%",
@@ -1018,9 +999,9 @@ elif page == "📈  Analysis":
 
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    render_plotly(fig_acc, 300, "train_acc")
+                    st.plotly_chart(fig_acc, use_container_width=True)
                 with col_b:
-                    render_plotly(fig_loss, 300, "train_loss")
+                    st.plotly_chart(fig_loss, use_container_width=True)
             else:
                 st.line_chart(
                     {"Train Acc": hist["train_acc"], "Val Acc": hist["val_acc"]}
@@ -1071,7 +1052,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=250,
                 )
-                render_plotly(fig_gap, 250, "fig_gap")
+                st.plotly_chart(fig_gap, use_container_width=True)
 
             final_gap = gap[-1]
             if final_gap < 3:
@@ -1145,7 +1126,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=420,
                 )
-                render_plotly(fig_cm, 420, "fig_cm")
+                st.plotly_chart(fig_cm, use_container_width=True)
             else:
                 df_cm = pd.DataFrame(disp_matrix, index=cls_names, columns=cls_names)
                 st.dataframe(df_cm, use_container_width=True)
@@ -1222,7 +1203,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=380,
                 )
-                render_plotly(radar_fig, 380, "radar_fig")
+                st.plotly_chart(radar_fig, use_container_width=True)
 
                 f1_vals = [per[c]["f1"] for c in cls_names]
                 colors = [CLASS_COLORS.get(c, "#94a3b8") for c in cls_names]
@@ -1246,7 +1227,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=280,
                 )
-                render_plotly(fig_f1, 280, "fig_f1")
+                st.plotly_chart(fig_f1, use_container_width=True)
 
             rows = []
             for cls, m in cm_data["per_class"].items():
@@ -1368,7 +1349,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=520,
                 )
-                render_plotly(fig_tsne, 520, "fig_tsne")
+                st.plotly_chart(fig_tsne, use_container_width=True)
 
                 st.markdown("---")
                 st.markdown(
@@ -1397,7 +1378,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=20, b=10),
                     height=240,
                 )
-                render_plotly(fig_dist, 240, "fig_dist")
+                st.plotly_chart(fig_dist, use_container_width=True)
             else:
                 st.scatter_chart(
                     df_tsne[["x", "y", "label_name"]], x="x", y="y", color="label_name"
@@ -1676,7 +1657,7 @@ elif page == "🔍  Inference":
                         margin=dict(l=10, r=10, t=20, b=10),
                         height=280,
                     )
-                    render_plotly(fig2, 280, "inference_probs")
+                    st.plotly_chart(fig2, use_container_width=True)
                 except ImportError:
                     st.line_chart(pd.DataFrame(all_probs, columns=CLASS_NAMES))
 

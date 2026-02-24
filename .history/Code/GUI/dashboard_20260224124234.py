@@ -168,7 +168,9 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         except Exception:
             pass
 
-    # 2. Margins — let Plotly auto-calculate right margin to fit legend
+    # 2. Margins — never touch legend position; just ensure right margin is
+    #    wide enough so the default right-side legend text is never clipped.
+    #    160 px comfortably fits the longest class name "THREE_PHASE_FAULT".
     _prev_t = None
     try:
         _prev_t = lay.margin.t
@@ -176,17 +178,15 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         pass
     lay.margin = dict(
         l=75,
+        r=160,
         t=(_prev_t or 50),
         b=60,
         pad=4,
     )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
 
-    # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
+    # 3. Always autosize — Plotly fills whatever space the container gives
     lay.autosize = True
-    lay.width = None   # placeholder; JS will fill this before newPlot
+    lay.width = None
     lay.height = height
 
     fig_json = _pio.to_json(fig2, validate=False)
@@ -219,21 +219,15 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 </div>
 <script>
 (function(){{
-  var fig   = {fig_json};
-  var divId = '{div_id}';
-  var normH = {height};
-  var pw    = document.getElementById('pw');
-
-  /* Measure container width BEFORE newPlot so margin.r is respected */
-  function containerW() {{ return pw.clientWidth || window.innerWidth; }}
-
-  /* Initial plot with explicit width — autosize:true guarantees margin.r is calculated */
-  fig.layout.width  = containerW();
-  fig.layout.autosize = true;
+  var fig    = {fig_json};
+  var divId  = '{div_id}';
+  var fsH    = screen.height;
+  var fsW    = screen.width;
+  var normH  = {height};
 
   var cfg = {{
     displaylogo:  false,
-    responsive:   false,   /* we manage resize manually via ResizeObserver */
+    responsive:   true,
     modeBarButtonsToRemove: [],
     modeBarButtonsToAdd: [{{
       name: 'Full screen',
@@ -251,14 +245,15 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
                    || document.mozFullScreenElement);
         var doc  = document.documentElement;
         if (!isFS) {{
-          /* Enter fullscreen first; relayout AFTER the transition */
+          Plotly.relayout(divId, {{ height: fsH }});
           var req = doc.requestFullscreen || doc.webkitRequestFullscreen
                  || doc.mozRequestFullScreen || doc.msRequestFullscreen;
           if (req) req.call(doc).catch(function(){{}});
         }} else {{
+          Plotly.relayout(divId, {{ height: normH }});
           var exit = document.exitFullscreen || document.webkitExitFullscreen
                   || document.mozCancelFullScreen || document.msExitFullscreen;
-          if (exit) exit.call(document).catch(function(){{}});
+          if (exit) exit.call(document);
         }}
       }}
     }}],
@@ -266,30 +261,16 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 
   Plotly.newPlot(divId, fig.data, fig.layout, cfg);
 
-  /* Fullscreen change — relayout AFTER browser has resized the viewport */
   function onFSChange() {{
     var inFS = !!(document.fullscreenElement
               || document.webkitFullscreenElement
               || document.mozFullScreenElement);
-    if (inFS) {{
-      Plotly.relayout(divId, {{ width: screen.width, height: screen.height }});
-    }} else {{
-      Plotly.relayout(divId, {{ width: containerW(), height: normH }});
-    }}
+    if (!inFS) Plotly.relayout(divId, {{ height: normH }});
   }}
   document.addEventListener('fullscreenchange',       onFSChange);
   document.addEventListener('webkitfullscreenchange', onFSChange);
   document.addEventListener('mozfullscreenchange',    onFSChange);
   document.addEventListener('MSFullscreenChange',     onFSChange);
-
-  /* Track Streamlit column width changes */
-  if (window.ResizeObserver) {{
-    var ro = new ResizeObserver(function() {{
-      var inFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
-      if (!inFS) Plotly.relayout(divId, {{ width: containerW() }});
-    }});
-    ro.observe(pw);
-  }}
 }})();
 </script>
 </body>
@@ -539,7 +520,7 @@ if page == "🏠  Home":
                 paper_bgcolor="#0f172a",
                 plot_bgcolor="#0f172a",
                 font=dict(color="#94a3b8"),
-                legend=dict(bgcolor="#1e293b", bordercolor="#334155", x=1.1),
+                legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
                 yaxis=dict(
                     title="Accuracy",
                     tickformat=".0%",

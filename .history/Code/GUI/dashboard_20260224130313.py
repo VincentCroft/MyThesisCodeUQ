@@ -153,10 +153,14 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 
     # 1. All cartesian axes: automargin + standoff so titles don't overlap
     for _ak in (
-        "xaxis", "yaxis",
-        "xaxis2", "yaxis2",
-        "xaxis3", "yaxis3",
-        "xaxis4", "yaxis4",
+        "xaxis",
+        "yaxis",
+        "xaxis2",
+        "yaxis2",
+        "xaxis3",
+        "yaxis3",
+        "xaxis4",
+        "yaxis4",
     ):
         _ax = getattr(lay, _ak, None)
         if _ax is None:
@@ -168,7 +172,7 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         except Exception:
             pass
 
-    # 2. Margins — let Plotly auto-calculate right margin to fit legend
+    # 2. Margins — explicitly set right margin to ensure legend is never clipped
     _prev_t = None
     try:
         _prev_t = lay.margin.t
@@ -176,17 +180,16 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         pass
     lay.margin = dict(
         l=75,
+        r=180,  # 180px guarantees enough space for "THREE_PHASE_FAULT"
         t=(_prev_t or 50),
         b=60,
         pad=4,
     )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
 
     # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
-    lay.autosize = True
-    lay.width = None   # placeholder; JS will fill this before newPlot
+    #    autosize=False ensures Plotly strictly uses our margin.r=180.
+    lay.autosize = False
+    lay.width = None  # placeholder; JS will fill this before newPlot
     lay.height = height
 
     fig_json = _pio.to_json(fig2, validate=False)

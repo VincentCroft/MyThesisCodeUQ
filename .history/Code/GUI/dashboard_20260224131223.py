@@ -153,10 +153,14 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 
     # 1. All cartesian axes: automargin + standoff so titles don't overlap
     for _ak in (
-        "xaxis", "yaxis",
-        "xaxis2", "yaxis2",
-        "xaxis3", "yaxis3",
-        "xaxis4", "yaxis4",
+        "xaxis",
+        "yaxis",
+        "xaxis2",
+        "yaxis2",
+        "xaxis3",
+        "yaxis3",
+        "xaxis4",
+        "yaxis4",
     ):
         _ax = getattr(lay, _ak, None)
         if _ax is None:
@@ -168,25 +172,30 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         except Exception:
             pass
 
-    # 2. Margins — let Plotly auto-calculate right margin to fit legend
+    # 2. Margins — explicitly set right margin to ensure legend is never clipped
     _prev_t = None
     try:
         _prev_t = lay.margin.t
     except Exception:
         pass
+    
+    # For polar charts (radar), we need even more right margin because the 
+    # polar coordinate system itself takes up more horizontal space.
+    _is_polar = bool(getattr(lay, "polar", None))
+    _mr = 220 if _is_polar else 180
+
     lay.margin = dict(
         l=75,
+        r=_mr,  # 180px-220px guarantees enough space for "THREE_PHASE_FAULT"
         t=(_prev_t or 50),
         b=60,
         pad=4,
     )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
 
     # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
-    lay.autosize = True
-    lay.width = None   # placeholder; JS will fill this before newPlot
+    #    autosize=False ensures Plotly strictly uses our margin.r=180.
+    lay.autosize = False
+    lay.width = None  # placeholder; JS will fill this before newPlot
     lay.height = height
 
     fig_json = _pio.to_json(fig2, validate=False)
@@ -225,11 +234,14 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
   var pw    = document.getElementById('pw');
 
   /* Measure container width BEFORE newPlot so margin.r is respected */
-  function containerW() {{ return pw.clientWidth || window.innerWidth; }}
+  function containerW() {{ 
+    /* Use window.innerWidth as fallback, but subtract a small scrollbar buffer */
+    return pw.clientWidth || (window.innerWidth - 20); 
+  }}
 
-  /* Initial plot with explicit width — autosize:true guarantees margin.r is calculated */
+  /* Initial plot with explicit width — autosize:false guarantees margin.r=180 */
   fig.layout.width  = containerW();
-  fig.layout.autosize = true;
+  fig.layout.autosize = false;
 
   var cfg = {{
     displaylogo:  false,
