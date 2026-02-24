@@ -1531,7 +1531,7 @@ elif page == "Analysis":
             st.markdown("")
 
             _CM_OPTS = ["Raw Counts", "Normalised (Recall)"]
-            _CM_KEY = "cm_view_mode"
+            _CM_KEY  = "cm_view_mode"
             if _CM_KEY not in st.session_state:
                 st.session_state[_CM_KEY] = _CM_OPTS[0]
             # Hidden trigger buttons (JS will hide them; must come before the HTML)
@@ -1540,7 +1540,7 @@ elif page == "Analysis":
                     st.session_state[_CM_KEY] = _cmo
                     st.rerun()
             # Custom pill-switch HTML — same pattern as sidebar nav
-            _cur_cm = st.session_state[_CM_KEY]
+            _cur_cm  = st.session_state[_CM_KEY]
             _ps_html = "".join(
                 f'  <span class="ps-item{" ps-active" if _o == _cur_cm else ""}" '
                 f'data-value="{_o}">{_o}</span>\n'

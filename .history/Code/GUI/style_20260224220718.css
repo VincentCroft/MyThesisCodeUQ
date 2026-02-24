@@ -390,54 +390,77 @@ div[data-testid="stExpanderDetails"] {
 }
 .nav-active:hover { background: rgba(30,41,59,0.92) !important; }
 
-/* ── Custom pill-switch (exact same pattern as tab-list / sidebar-nav) ──── */
-.pill-label {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    margin-bottom: 6px;
-    font-weight: 500;
-}
-.pill-switch {
-    display: inline-flex;
-    flex-direction: row;
-    position: relative;
-    background: var(--glass-bg);
-    border: 1px solid var(--glass-border);
-    border-top-color: var(--glass-border-top);
-    border-radius: 14px;
-    padding: 4px;
-    gap: 3px;
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    overflow: visible;
+/* ── Radio — pill switcher (exact same pattern as tab-list / tab) ──── */
+/* Container — mirrors .stTabs [data-baseweb="tab-list"] */
+[data-testid="stRadio"] > div:last-child {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    background: var(--glass-bg) !important;
+    border-radius: 14px !important;
+    border: 1px solid var(--glass-border) !important;
+    border-top-color: var(--glass-border-top) !important;
+    padding: 4px !important;
+    gap: 3px !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    overflow: visible !important;
     box-shadow:
         0 1px 0 var(--glass-border-top) inset,
         0 2px 8px var(--shadow-ambient),
-        0 6px 20px var(--shadow-color);
+        0 6px 20px var(--shadow-color) !important;
 }
-.ps-item {
-    display: inline-block;
-    padding: 0.5rem 1.1rem;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    background: transparent;
-    border: 1px solid transparent;
-    position: relative;
-    z-index: 1;
-    cursor: pointer;
-    white-space: nowrap;
-    user-select: none;
-    transition: color 0.22s ease;
+/* Item — mirrors .stTabs [data-baseweb="tab"] */
+[data-testid="stRadio"] [data-baseweb="radio"] {
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-size: 0.875rem !important;
+    color: var(--text-muted) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+    position: relative !important;
+    z-index: 1 !important;
+    padding: 0.5rem 1.1rem !important;
+    cursor: pointer !important;
+    transition:
+        color 0.22s ease,
+        background 0.22s ease,
+        border-color 0.22s ease,
+        box-shadow 0.22s ease !important;
+    outline: none !important;
 }
-.ps-item:hover { color: var(--text-color); background: rgba(255,255,255,0.06); }
-.ps-active {
-    background: rgba(30,41,59,0.95);
-    border-color: var(--glass-border-top);
+[data-testid="stRadio"] [data-baseweb="radio"]:hover {
     color: var(--text-color) !important;
-    font-weight: 700;
-    box-shadow: 0 1px 0 var(--glass-border-top) inset, 0 2px 8px rgba(0,0,0,0.30);
+    background: rgba(255,255,255,0.06) !important;
+}
+/* Active item — mirrors .stTabs [aria-selected="true"] */
+[data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] {
+    background: rgba(30,41,59,0.95) !important;
+    border: 1px solid var(--glass-border-top) !important;
+    color: var(--text-color) !important;
+    font-weight: 700 !important;
+    box-shadow:
+        0 1px 0 var(--glass-border-top) inset,
+        0 2px 8px rgba(0,0,0,0.30) !important;
+}
+/* Hide circle indicator and raw input */
+[data-testid="stRadio"] [data-baseweb="radio"] > div:first-child,
+[data-testid="stRadio"] [data-baseweb="radio"] input { display: none !important; }
+/* Label fills the wrapper, inherits all colour/weight */
+[data-testid="stRadio"] [data-baseweb="radio"] label,
+[data-testid="stRadio"] [data-baseweb="radio"] label * {
+    display: inline !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    color: inherit !important;
+    font-weight: inherit !important;
+    font-size: inherit !important;
+    cursor: pointer !important;
+    user-select: none !important;
+    white-space: nowrap !important;
 }
 /* ── Sliding pill indicator (JS-injected .sp-pill) ─────────────── */
 .sp-pill {
@@ -464,8 +487,8 @@ div[data-testid="stExpanderDetails"] {
     border-color: transparent !important;
     box-shadow: none !important;
 }
-/* once JS pill is ready, suppress CSS active style (pill takes over) */
-.pill-switch.sp-ready .ps-active {
+[data-testid="stRadio"] > div.sp-ready [data-baseweb="radio"][aria-checked="true"],
+[data-testid="stRadio"] > div[role="radiogroup"].sp-ready [data-baseweb="radio"][aria-checked="true"] {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;

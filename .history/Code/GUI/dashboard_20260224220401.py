@@ -135,55 +135,42 @@ _SLIDING_PILL_JS = """
     }, 60);
   }
 
-  // ─── Pill switches (custom HTML, mirrors the nav approach exactly) ────────
+  // ─── Radio groups ────────────────────────────────────────
+  // Store state on the PARENT window so it survives iframe reloads (Streamlit reruns)
   var win = window.parent;
-  if (!win._stPsPrev) win._stPsPrev = {};
-  var _psValues = []; // all pill item values, used to find & hide trigger buttons
+  // Store the PREVIOUSLY selected label text per radio group index.
+  // Using label text (not pixels) so fresh coordinates are always measured
+  // from the live DOM after each Streamlit rerender.
+  if (!win._stRadioPrev) win._stRadioPrev = {};
 
-  function hidePillTriggerBtns() {
-    if (_psValues.length === 0) return;
-    doc.querySelectorAll('button').forEach(function (btn) {
-      var txt = btn.innerText.trim();
-      if (_psValues.indexOf(txt) === -1) return;
-      if (btn.closest('[data-testid="stSidebar"]')) return; // skip nav buttons
-      var wrap = btn.parentElement;
-      while (wrap && !wrap.classList.contains('stButton')) wrap = wrap.parentElement;
-      if (!wrap) return;
-      wrap.style.cssText = 'position:absolute!important;width:0!important;' +
-        'height:0!important;overflow:hidden!important;opacity:0!important;' +
-        'pointer-events:none!important;padding:0!important;margin:0!important;' +
-        'border:none!important;min-height:0!important';
-      var el = wrap.parentElement;
-      for (var i = 0; i < 4 && el; i++) {
-        if (el.classList && el.classList.contains('element-container')) {
-          el.style.cssText = 'height:0!important;min-height:0!important;' +
-            'overflow:hidden!important;padding:0!important;margin:0!important';
-        }
-        el = el.parentElement;
-      }
-    });
-  }
+  function setupRadio(rg) {
+    var pill = createPill(rg);
 
-  function setupPillSwitch(sw) {
-    var key = sw.getAttribute('data-key') || ('ps' + Date.now());
-    var pill = createPill(sw);
+    // Index of this radio group among all groups on the page
+    var idx = Array.from(
+      doc.querySelectorAll('[data-testid="stRadio"] > div:last-child')
+    ).indexOf(rg);
 
-    // Register all item values so hidePillTriggerBtns can find them
-    sw.querySelectorAll('.ps-item').forEach(function (it) {
-      var v = it.getAttribute('data-value');
-      if (v && _psValues.indexOf(v) === -1) _psValues.push(v);
-    });
-
-    function getItem(val) {
-      var items = sw.querySelectorAll('.ps-item');
+    // Get a radio item element by its visible label text
+    function getItemByLabel(text) {
+      var items = rg.querySelectorAll('[data-baseweb="radio"]');
       for (var i = 0; i < items.length; i++) {
-        if (items[i].getAttribute('data-value') === val) return items[i];
+        var lbl = items[i].querySelector('label');
+        if (lbl && lbl.textContent.trim() === text) return items[i];
       }
       return null;
     }
 
+    // Get the label text of the currently checked item
+    function checkedLabel() {
+      var a = rg.querySelector('[aria-checked="true"]');
+      if (!a) return null;
+      var lbl = a.querySelector('label');
+      return lbl ? lbl.textContent.trim() : null;
+    }
+
     function movePillTo(fromEl, toEl, animate) {
-      var cRect = sw.getBoundingClientRect();
+      var cRect = rg.getBoundingClientRect();
       if (fromEl && animate) {
         var fRect = fromEl.getBoundingClientRect();
         pill.style.transition = 'none';
@@ -207,51 +194,33 @@ _SLIDING_PILL_JS = """
       pill.style.opacity = '1';
     }
 
-    // Click interceptors — same pattern as setupNav
-    sw.querySelectorAll('.ps-item').forEach(function (item) {
-      item.addEventListener('click', function (e) {
-        var target = item.getAttribute('data-value');
-        // Save current active BEFORE toggling
-        var cur = sw.querySelector('.ps-active');
-        win._stPsPrev[key] = cur ? cur.getAttribute('data-value') : null;
-        // Toggle active class immediately
-        sw.querySelectorAll('.ps-item').forEach(function (it) {
-          it.classList.toggle('ps-active', it.getAttribute('data-value') === target);
-        });
-        // Animate pill pre-rerender
-        var fromEl = win._stPsPrev[key] ? getItem(win._stPsPrev[key]) : null;
-        var toEl   = getItem(target);
-        if (toEl) movePillTo(fromEl, toEl, true);
-        // Click the hidden Streamlit trigger button
-        doc.querySelectorAll('button').forEach(function (btn) {
-          if (btn.innerText.trim() === target &&
-              !btn.closest('[data-testid="stSidebar"]')) btn.click();
-        });
+    // Intercept clicks: save the CURRENT label BEFORE Streamlit changes state
+    rg.querySelectorAll('[data-baseweb="radio"]').forEach(function (item) {
+      item.addEventListener('mousedown', function () {
+        if (idx !== -1) win._stRadioPrev[idx] = checkedLabel();
       });
     });
 
-    // Init after mount / rerender — same pattern as setupNav
+    // Init after first mount / after Streamlit rerender
     function initPill(attempts) {
-      var toEl = sw.querySelector('.ps-active');
+      var toEl = rg.querySelector('[aria-checked="true"]');
       if (!toEl || toEl.getBoundingClientRect().width === 0) {
         if (attempts < 30) setTimeout(function () { initPill(attempts + 1); }, 40);
         return;
       }
-      var prevVal = win._stPsPrev[key];
-      var fromEl  = prevVal ? getItem(prevVal) : null;
-      var doAnim  = fromEl && (fromEl !== toEl) && (fromEl.getBoundingClientRect().width > 0);
-      movePillTo(doAnim ? fromEl : null, toEl, doAnim);
-      win._stPsPrev[key] = toEl.getAttribute('data-value');
-      hidePillTriggerBtns();
-      requestAnimationFrame(function () { sw.classList.add('sp-ready'); });
-    }
 
-    hidePillTriggerBtns();
-    setTimeout(function () {
-      initPill(0);
-      new MutationObserver(function () { hidePillTriggerBtns(); })
-        .observe(sw, { childList: true, subtree: true });
-    }, 60);
+      var prevLabel = (idx !== -1) ? win._stRadioPrev[idx] : null;
+      var fromEl    = prevLabel ? getItemByLabel(prevLabel) : null;
+      var doAnim    = fromEl && (fromEl !== toEl) && (fromEl.getBoundingClientRect().width > 0);
+
+      movePillTo(doAnim ? fromEl : null, toEl, doAnim);
+
+      // Update stored label to current selection
+      if (idx !== -1) win._stRadioPrev[idx] = checkedLabel();
+
+      requestAnimationFrame(function () { rg.classList.add('sp-ready'); });
+    }
+    requestAnimationFrame(function () { initPill(0); });
   }
 
   // ─── Sidebar nav (intercept clicks → no full reload) ─────
@@ -387,8 +356,8 @@ _SLIDING_PILL_JS = """
     doc.querySelectorAll('.stTabs [data-baseweb="tab-list"]').forEach(function (el) {
       if (!seen.has(el)) { seen.add(el); setupTabList(el); }
     });
-    doc.querySelectorAll('.pill-switch').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupPillSwitch(el); }
+    doc.querySelectorAll('[data-testid="stRadio"] > div:last-child').forEach(function (el) {
+      if (!seen.has(el)) { seen.add(el); setupRadio(el); }
     });
     doc.querySelectorAll('.sidebar-nav').forEach(function (el) {
       if (!seen.has(el)) { seen.add(el); setupNav(el); }
@@ -1530,28 +1499,12 @@ elif page == "Analysis":
             st.metric("Overall Accuracy", f"{oa:.2%}")
             st.markdown("")
 
-            _CM_OPTS = ["Raw Counts", "Normalised (Recall)"]
-            _CM_KEY = "cm_view_mode"
-            if _CM_KEY not in st.session_state:
-                st.session_state[_CM_KEY] = _CM_OPTS[0]
-            # Hidden trigger buttons (JS will hide them; must come before the HTML)
-            for _cmo in _CM_OPTS:
-                if st.button(_cmo, key=f"_ps_{_CM_KEY}_{_cmo}"):
-                    st.session_state[_CM_KEY] = _cmo
-                    st.rerun()
-            # Custom pill-switch HTML — same pattern as sidebar nav
-            _cur_cm = st.session_state[_CM_KEY]
-            _ps_html = "".join(
-                f'  <span class="ps-item{" ps-active" if _o == _cur_cm else ""}" '
-                f'data-value="{_o}">{_o}</span>\n'
-                for _o in _CM_OPTS
+            view_mode = st.radio(
+                "Display mode",
+                ["Raw Counts", "Normalised (Recall)"],
+                horizontal=True,
             )
-            st.markdown(
-                f'<p class="pill-label">Display mode</p>'
-                f'<div class="pill-switch" data-key="{_CM_KEY}">\n{_ps_html}</div>',
-                unsafe_allow_html=True,
-            )
-            use_norm = st.session_state[_CM_KEY] == "Normalised (Recall)"
+            use_norm = view_mode == "Normalised (Recall)"
             disp_matrix = matrix_norm if use_norm else matrix
             fmt_vals = [
                 [f"{v:.2f}" if use_norm else str(int(v)) for v in row]
