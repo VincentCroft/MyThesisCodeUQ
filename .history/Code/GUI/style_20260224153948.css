@@ -1,0 +1,370 @@
+/* =====================================================================
+   PMU Fault Classifier — style.css
+   Supports dark / light via CSS custom properties
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+html, body, [class*="css"] { font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; }
+
+/* ── App shell ─────────────────────────────────────────────────────── */
+.stApp { background-color: var(--bg-color) !important; }
+.stAppHeader, .stApp [data-testid="stHeader"] { background-color: transparent !important; }
+.stApp, .stApp p,
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+.stApp label, .stApp li { color: var(--text-color) !important; }
+.stApp [data-testid="stMetricValue"] { color: var(--accent-color) !important; }
+.stApp .fault-badge, .stApp .prob-bar-wrap span { color: inherit !important; }
+
+/* ── Sidebar ─────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--border-color) !important;
+    backdrop-filter: blur(24px) saturate(160%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(160%) !important;
+}
+[data-testid="stSidebar"] h1,[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] p,[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] span { color: var(--text-color) !important; }
+
+/* ── Metric cards ───────────────────────────────────────────────── */
+div[data-testid="metric-container"] {
+    background: var(--metric-bg) !important;
+    border: 1px solid var(--border-color);
+    border-radius: 16px; padding: 18px 22px;
+    box-shadow: 0 4px 24px var(--shadow-color);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    transition: transform 0.25s cubic-bezier(0.25,0.8,0.25,1),
+                box-shadow 0.25s ease, border-color 0.25s ease;
+}
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px var(--shadow-hover);
+    border-color: var(--accent-color);
+}
+div[data-testid="metric-container"] label {
+    color: var(--text-muted) !important; font-size: 0.78rem;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px;
+}
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: var(--accent-color) !important; font-size: 1.9rem; font-weight: 800;
+}
+
+/* ── Section header ─────────────────────────────────────────────── */
+.section-header {
+    font-size: 1.15rem; font-weight: 700; color: var(--text-color) !important;
+    margin-bottom: 0.75rem;
+    border-left: 4px solid var(--accent-color); padding-left: 12px;
+    letter-spacing: 0.3px;
+}
+
+/* ── Fault badges ────────────────────────────────────────────────── */
+.fault-badge {
+    display: inline-block; padding: 5px 14px;
+    border-radius: 9999px; font-weight: 700; font-size: 0.875rem;
+    margin-bottom: 8px; box-shadow: 0 3px 10px var(--shadow-color);
+    border: 1px solid rgba(255,255,255,0.08); letter-spacing: 0.3px;
+}
+.badge-NORMAL            { background: var(--badge-normal-bg); color: var(--badge-normal-text) !important; }
+.badge-SLG_FAULT         { background: var(--badge-slg-bg);    color: var(--badge-slg-text) !important; }
+.badge-LL_FAULT          { background: var(--badge-ll-bg);     color: var(--badge-ll-text) !important; }
+.badge-THREE_PHASE_FAULT { background: var(--badge-3p-bg);     color: var(--badge-3p-text) !important; }
+.badge-UNKNOWN           { background: var(--badge-unk-bg);    color: var(--badge-unk-text) !important; }
+
+/* ── Probability bar ─────────────────────────────────────────────── */
+.prob-bar-wrap { background: var(--bar-bg); border-radius: 8px; height: 14px;
+    overflow: hidden; margin: 4px 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.08); }
+.prob-bar-fill { height: 100%; border-radius: 8px;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1); }
+
+/* ── Log box ─────────────────────────────────────────────────────── */
+.log-box {
+    background: var(--log-bg); border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 14px;
+    font-family: "Fira Code", "Consolas", monospace; font-size: 0.8rem;
+    color: var(--text-muted) !important; max-height: 380px; overflow-y: auto;
+    white-space: pre-wrap; box-shadow: inset 0 3px 10px var(--shadow-color);
+    scrollbar-width: thin; scrollbar-color: var(--border-color) transparent;
+}
+.log-box::-webkit-scrollbar { width: 5px; }
+.log-box::-webkit-scrollbar-track { background: transparent; }
+.log-box::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.stButton > button {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important; font-size: 0.875rem !important;
+    color: var(--text-color) !important; padding: 0.55rem 1.1rem !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    box-shadow: 0 2px 10px var(--shadow-color) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease,
+                background 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
+    letter-spacing: 0.2px !important;
+}
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px var(--shadow-hover) !important;
+    background: var(--glass-hover) !important;
+    border-color: var(--accent-color) !important;
+    color: var(--accent-color) !important;
+}
+.stButton > button:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 6px var(--shadow-color) !important;
+}
+/* Primary button */
+.stButton > button[kind="primary"],
+.stButton > button[data-testid="baseButton-primary"] {
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-alt) 100%) !important;
+    border-color: var(--accent-color) !important; color: #fff !important;
+    box-shadow: 0 4px 18px var(--accent-glow) !important;
+}
+.stButton > button[kind="primary"]:hover,
+.stButton > button[data-testid="baseButton-primary"]:hover {
+    filter: brightness(1.12) !important;
+    box-shadow: 0 8px 30px var(--accent-glow) !important;
+    color: #fff !important; transform: translateY(-2px) !important;
+}
+
+/* ── Training status animated badge ─────────────────────────────── */
+.train-running-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--accent-glow-soft);
+    border: 1px solid var(--accent-color); border-radius: 9999px;
+    padding: 7px 18px; font-weight: 600; font-size: 0.875rem;
+    color: var(--accent-color) !important;
+    animation: pulse-badge 1.8s ease-in-out infinite;
+}
+@keyframes pulse-badge {
+    0%,100% { box-shadow: 0 0 0 0 var(--accent-glow); }
+    50%      { box-shadow: 0 0 0 5px transparent; }
+}
+.train-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent-color);
+    animation: dot-blink 1.2s ease-in-out infinite;
+}
+@keyframes dot-blink {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%      { opacity:0.4; transform:scale(0.7); }
+}
+
+/* ── Expander ────────────────────────────────────────────────────── */
+.streamlit-expanderHeader {
+    font-weight: 600 !important; font-size: 0.95rem !important;
+    color: var(--text-color) !important; background: var(--glass-bg) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(12px) !important; -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: 0 2px 10px var(--shadow-color) !important;
+    transition: border-color 0.2s ease !important;
+}
+.streamlit-expanderHeader:hover { border-color: var(--accent-color) !important; }
+div[data-testid="stExpander"] { border: none !important; background: transparent !important; }
+div[data-testid="stExpanderDetails"] {
+    border: 1px solid var(--border-color) !important; border-top: none !important;
+    border-bottom-left-radius: 12px !important; border-bottom-right-radius: 12px !important;
+    background: var(--card-bg) !important; padding: 1.1rem !important;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    background: var(--glass-bg) !important; border-radius: 12px !important;
+    border: 1px solid var(--glass-border) !important;
+    padding: 4px !important; gap: 4px !important; backdrop-filter: blur(12px) !important;
+}
+.stTabs [data-baseweb="tab"] {
+    border-radius: 9px !important; font-weight: 600 !important; font-size: 0.875rem !important;
+    color: var(--text-muted) !important; background: transparent !important;
+    border: none !important; transition: all 0.2s ease !important; padding: 0.5rem 1rem !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    color: var(--accent-color) !important; background: var(--glass-hover) !important;
+}
+.stTabs [aria-selected="true"] {
+    background: var(--accent-color) !important; color: #fff !important;
+    box-shadow: 0 3px 12px var(--accent-glow) !important;
+}
+.stTabs [data-baseweb="tab-border"] { display: none !important; }
+
+/* ── Data table ──────────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border-radius: 14px !important; overflow: hidden !important;
+    box-shadow: 0 4px 16px var(--shadow-color) !important;
+    border: 1px solid var(--border-color) !important;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────────── */
+.stTextInput > div > div > input,
+.stNumberInput > div > div > input {
+    background: var(--input-bg) !important; border: 1px solid var(--border-color) !important;
+    border-radius: 10px !important; color: var(--text-color) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus {
+    border-color: var(--accent-color) !important;
+    box-shadow: 0 0 0 3px var(--accent-glow) !important; outline: none !important;
+}
+
+/* ── Progress bar ────────────────────────────────────────────────── */
+.stProgress > div > div > div > div {
+    background: linear-gradient(90deg, var(--accent-color), var(--accent-alt)) !important;
+    border-radius: 9999px !important; transition: width 0.4s ease !important;
+}
+.stProgress > div > div > div { background: var(--bar-bg) !important; border-radius: 9999px !important; }
+
+/* ── Alerts ──────────────────────────────────────────────────────── */
+.stAlert { border-radius: 12px !important; border-left-width: 4px !important; }
+
+/* ── Global scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.stAppHeader {
+    background-color: transparent !important;
+}
+.stApp [data-testid="stHeader"] {
+    background-color: transparent !important;
+}
+.stApp, .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, .stApp label, .stApp li {
+    color: var(--text-color) !important;
+}
+
+/* Fix specific text colors that shouldn't be overridden */
+.stApp [data-testid="stMetricValue"] {
+    color: var(--accent-color) !important;
+}
+.stApp .fault-badge {
+    color: inherit !important;
+}
+.stApp .prob-bar-wrap span {
+    color: inherit !important;
+}
+
+div[data-testid="metric-container"] {
+    background: var(--metric-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-shadow: 0 8px 32px var(--shadow-color);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px var(--shadow-color);
+    border-color: var(--accent-color);
+}
+div[data-testid="metric-container"] label {
+    color: var(--text-muted) !important; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+}
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: var(--accent-color) !important; font-size: 2rem; font-weight: 800;
+}
+
+.section-header {
+    font-size: 1.25rem; font-weight: 700;
+    color: var(--text-color) !important; margin-bottom: 1rem;
+    border-left: 4px solid var(--accent-color); padding-left: 12px;
+    letter-spacing: 0.5px;
+}
+
+.fault-badge {
+    display: inline-block; padding: 6px 16px;
+    border-radius: 9999px; font-weight: 700;
+    font-size: 0.9rem; margin-bottom: 8px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.badge-NORMAL            { background: var(--badge-normal-bg); color: var(--badge-normal-text) !important; }
+.badge-SLG_FAULT         { background: var(--badge-slg-bg); color: var(--badge-slg-text) !important; }
+.badge-LL_FAULT          { background: var(--badge-ll-bg); color: var(--badge-ll-text) !important; }
+.badge-THREE_PHASE_FAULT { background: var(--badge-3p-bg); color: var(--badge-3p-text) !important; }
+.badge-UNKNOWN           { background: var(--badge-unk-bg); color: var(--badge-unk-text) !important; }
+
+.prob-bar-wrap { background: var(--bar-bg); border-radius: 8px; height: 14px;
+                 overflow: hidden; margin: 4px 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+.prob-bar-fill { height: 100%; border-radius: 8px; transition: width .4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+.log-box {
+    background: var(--log-bg); border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 16px;
+    font-family: "Fira Code", monospace; font-size: 0.85rem;
+    color: var(--text-muted) !important; max-height: 380px; overflow-y: auto;
+    white-space: pre-wrap;
+    box-shadow: inset 0 4px 12px var(--shadow-color);
+}
+
+[data-testid="stSidebar"] {
+    background: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* Modern button styling - Apple Frosted Glass Effect */
+.stButton > button {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    color: var(--text-color) !important;
+    padding: 0.5rem 1rem !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    box-shadow: 0 4px 16px var(--shadow-color) !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 24px var(--shadow-color) !important;
+    background: var(--glass-hover) !important;
+    border-color: var(--accent-color) !important;
+    color: var(--accent-color) !important;
+}
+.stButton > button:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 8px var(--shadow-color) !important;
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+    font-weight: 600 !important;
+    color: var(--text-color) !important;
+    background: var(--glass-bg) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+}
+div[data-testid="stExpander"] {
+    border: none !important;
+    background: transparent !important;
+}
+div[data-testid="stExpanderDetails"] {
+    border: 1px solid var(--border-color) !important;
+    border-top: none !important;
+    border-bottom-left-radius: 12px !important;
+    border-bottom-right-radius: 12px !important;
+    background: var(--bg-color) !important;
+    padding: 1rem !important;
+}
+
+/* Dataframes and Tables */
+[data-testid="stDataFrame"] {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px var(--shadow-color);
+    border: 1px solid var(--border-color);
+}
+

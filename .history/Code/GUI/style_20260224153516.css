@@ -1,0 +1,155 @@
+/* =====================================================================
+   PMU Fault Classifier — style.css
+   Supports dark / light via CSS custom properties
+   ===================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+html, body, [class*="css"] { font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; }
+
+/* Force Theme Colors */
+.stApp {
+    background-color: var(--bg-color) !important;
+}
+.stAppHeader {
+    background-color: transparent !important;
+}
+.stApp [data-testid="stHeader"] {
+    background-color: transparent !important;
+}
+.stApp, .stApp p, .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6, .stApp label, .stApp li {
+    color: var(--text-color) !important;
+}
+
+/* Fix specific text colors that shouldn't be overridden */
+.stApp [data-testid="stMetricValue"] {
+    color: var(--accent-color) !important;
+}
+.stApp .fault-badge {
+    color: inherit !important;
+}
+.stApp .prob-bar-wrap span {
+    color: inherit !important;
+}
+
+div[data-testid="metric-container"] {
+    background: var(--metric-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-shadow: 0 8px 32px var(--shadow-color);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px var(--shadow-color);
+    border-color: var(--accent-color);
+}
+div[data-testid="metric-container"] label {
+    color: var(--text-muted) !important; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+}
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: var(--accent-color) !important; font-size: 2rem; font-weight: 800;
+}
+
+.section-header {
+    font-size: 1.25rem; font-weight: 700;
+    color: var(--text-color) !important; margin-bottom: 1rem;
+    border-left: 4px solid var(--accent-color); padding-left: 12px;
+    letter-spacing: 0.5px;
+}
+
+.fault-badge {
+    display: inline-block; padding: 6px 16px;
+    border-radius: 9999px; font-weight: 700;
+    font-size: 0.9rem; margin-bottom: 8px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.badge-NORMAL            { background: var(--badge-normal-bg); color: var(--badge-normal-text) !important; }
+.badge-SLG_FAULT         { background: var(--badge-slg-bg); color: var(--badge-slg-text) !important; }
+.badge-LL_FAULT          { background: var(--badge-ll-bg); color: var(--badge-ll-text) !important; }
+.badge-THREE_PHASE_FAULT { background: var(--badge-3p-bg); color: var(--badge-3p-text) !important; }
+.badge-UNKNOWN           { background: var(--badge-unk-bg); color: var(--badge-unk-text) !important; }
+
+.prob-bar-wrap { background: var(--bar-bg); border-radius: 8px; height: 14px;
+                 overflow: hidden; margin: 4px 0; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+.prob-bar-fill { height: 100%; border-radius: 8px; transition: width .4s cubic-bezier(0.4, 0, 0.2, 1); }
+
+.log-box {
+    background: var(--log-bg); border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 16px;
+    font-family: "Fira Code", monospace; font-size: 0.85rem;
+    color: var(--text-muted) !important; max-height: 380px; overflow-y: auto;
+    white-space: pre-wrap;
+    box-shadow: inset 0 4px 12px var(--shadow-color);
+}
+
+[data-testid="stSidebar"] {
+    background: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--border-color);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+/* Modern button styling - Apple Frosted Glass Effect */
+.stButton > button {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    color: var(--text-color) !important;
+    padding: 0.5rem 1rem !important;
+    backdrop-filter: blur(16px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(180%) !important;
+    box-shadow: 0 4px 16px var(--shadow-color) !important;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+.stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 24px var(--shadow-color) !important;
+    background: var(--glass-hover) !important;
+    border-color: var(--accent-color) !important;
+    color: var(--accent-color) !important;
+}
+.stButton > button:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 8px var(--shadow-color) !important;
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+    font-weight: 600 !important;
+    color: var(--text-color) !important;
+    background: var(--glass-bg) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+}
+div[data-testid="stExpander"] {
+    border: none !important;
+    background: transparent !important;
+}
+div[data-testid="stExpanderDetails"] {
+    border: 1px solid var(--border-color) !important;
+    border-top: none !important;
+    border-bottom-left-radius: 12px !important;
+    border-bottom-right-radius: 12px !important;
+    background: var(--bg-color) !important;
+    padding: 1rem !important;
+}
+
+/* Dataframes and Tables */
+[data-testid="stDataFrame"] {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px var(--shadow-color);
+    border: 1px solid var(--border-color);
+}
+

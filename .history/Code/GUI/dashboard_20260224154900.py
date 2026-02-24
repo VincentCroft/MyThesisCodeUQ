@@ -49,10 +49,31 @@ st.set_page_config(
 )
 
 
-# Theme is fixed to dark
-_current_theme = "dark"
+# ── Theme Management ────────────────────────────────────────
+def toggle_theme():
+    config_path = THESIS / ".streamlit" / "config.toml"
+    config_path.parent.mkdir(exist_ok=True)
 
-theme_vars = """
+    current_theme = "dark"
+    if config_path.exists():
+        content = config_path.read_text()
+        if 'base="light"' in content.replace(" ", ""):
+            current_theme = "light"
+
+    new_theme = "light" if current_theme == "dark" else "dark"
+    config_path.write_text(f'[theme]\nbase="{new_theme}"\n')
+
+
+# Determine current theme
+_config_path = THESIS / ".streamlit" / "config.toml"
+_current_theme = "dark"
+if _config_path.exists():
+    _content = _config_path.read_text()
+    if 'base="light"' in _content.replace(" ", ""):
+        _current_theme = "light"
+
+if _current_theme == "dark":
+    theme_vars = """
     :root {
         --bg-color: #080d1a;
         --text-color: #e2e8f0;
@@ -83,113 +104,43 @@ theme_vars = """
         --sidebar-bg: linear-gradient(180deg, rgba(8,13,26,0.98) 0%, rgba(10,16,30,0.99) 100%);
     }
     """
+else:
+    theme_vars = """
+    :root {
+        --bg-color: #e8edf5;
+        --text-color: #0f172a;
+        --text-muted: #64748b;
+        --border-color: rgba(148,163,184,0.35);
+        --accent-color: #0ea5e9;
+        --accent-alt: #6366f1;
+        --accent-glow: rgba(14,165,233,0.35);
+        --accent-glow-soft: rgba(14,165,233,0.10);
+        --metric-bg: linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.85) 100%);
+        --card-bg: rgba(255,255,255,0.88);
+        --shadow-color: rgba(51,65,85,0.14);
+        --shadow-hover: rgba(51,65,85,0.26);
+        --shadow-ambient: rgba(148,163,184,0.15);
+        --glass-bg: rgba(255,255,255,0.68);
+        --glass-border: rgba(255,255,255,0.90);
+        --glass-border-top: rgba(255,255,255,1.00);
+        --glass-hover: rgba(255,255,255,0.90);
+        --input-bg: rgba(255,255,255,0.92);
+        --badge-normal-bg: rgba(220,252,231,0.90);  --badge-normal-text: #065f46;
+        --badge-slg-bg: rgba(255,237,213,0.90);     --badge-slg-text: #9a3412;
+        --badge-ll-bg: rgba(254,243,199,0.90);      --badge-ll-text: #92400e;
+        --badge-3p-bg: rgba(237,233,254,0.90);      --badge-3p-text: #5b21b6;
+        --badge-unk-bg: rgba(241,245,249,0.90);     --badge-unk-text: #475569;
+        --bar-bg: rgba(226,232,240,0.80);
+        --log-bg: rgba(248,250,252,0.95);
+        --log-text: #475569;
+        --sidebar-bg: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(241,245,249,0.90) 100%);
+    }
+    """
 
 # ── CSS ─────────────────────────────────────────────────────
 css_path = GUI_DIR / "style.css"
 custom_css = css_path.read_text() if css_path.exists() else ""
 st.markdown(f"<style>{theme_vars}\n{custom_css}</style>", unsafe_allow_html=True)
-
-# ── Sliding pill animation (injected via iframe parent-frame JS) ──
-_SLIDING_PILL_JS = """
-<script>
-(function () {
-  var doc = window.parent.document;
-
-  function createPill(container) {
-    var existing = container.querySelector('.sp-pill');
-    if (existing) return existing;
-    var pill = doc.createElement('div');
-    pill.className = 'sp-pill';
-    container.appendChild(pill);
-    return pill;
-  }
-
-  function movePill(pill, targetEl, container, animate) {
-    requestAnimationFrame(function () {
-      var cRect = container.getBoundingClientRect();
-      var tRect = targetEl.getBoundingClientRect();
-      if (tRect.width === 0) return;
-      pill.style.transition = animate
-        ? 'left .26s cubic-bezier(.25,.8,.25,1),top .26s cubic-bezier(.25,.8,.25,1),width .26s cubic-bezier(.25,.8,.25,1),height .26s cubic-bezier(.25,.8,.25,1),opacity .18s ease'
-        : 'none';
-      pill.style.left   = (tRect.left   - cRect.left) + 'px';
-      pill.style.top    = (tRect.top    - cRect.top)  + 'px';
-      pill.style.width  = tRect.width   + 'px';
-      pill.style.height = tRect.height  + 'px';
-      pill.style.opacity = '1';
-    });
-  }
-
-  // ─── Tabs ───────────────────────────────────────────────
-  function setupTabList(tl) {
-    var pill = createPill(tl);
-    function upd(anim) {
-      var a = tl.querySelector('[aria-selected="true"]');
-      if (a) movePill(pill, a, tl, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      tl.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(tl, { attributes: true, subtree: true, attributeFilter: ['aria-selected'] });
-    }, 60);
-  }
-
-  // ─── Radio groups ────────────────────────────────────────
-  function setupRadio(rg) {
-    // rg is the [data-testid="stRadio"] > div:last-child element
-    var pill = createPill(rg);
-    function upd(anim) {
-      var checked = rg.querySelector('[aria-checked="true"]');
-      var label   = checked && checked.querySelector('label');
-      if (label) movePill(pill, label, rg, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      rg.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(rg, { attributes: true, subtree: true, attributeFilter: ['aria-checked'] });
-    }, 60);
-  }
-
-  // ─── Sidebar nav ─────────────────────────────────────────
-  function setupNav(nav) {
-    var pill = createPill(nav);
-    function upd(anim) {
-      var a = nav.querySelector('.nav-active');
-      if (a) movePill(pill, a, nav, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      nav.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(nav, { childList: true, subtree: true, attributes: true,
-                        attributeFilter: ['class'] });
-    }, 60);
-  }
-
-  var seen = new WeakSet();
-  function scan() {
-    // tab lists
-    doc.querySelectorAll('.stTabs [data-baseweb="tab-list"]').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupTabList(el); }
-    });
-    // radio groups: target the inner flex container
-    doc.querySelectorAll('[data-testid="stRadio"] > div:last-child').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupRadio(el); }
-    });
-    // sidebar nav
-    doc.querySelectorAll('.sidebar-nav').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupNav(el); }
-    });
-  }
-
-  new MutationObserver(scan).observe(doc.body, { childList: true, subtree: true });
-  scan();
-})();
-</script>
-"""
-_components.html(_SLIDING_PILL_JS, height=0)
 
 # ════════════════════════════════════════════════════════════
 #  Constants
@@ -503,11 +454,9 @@ def prob_bar_html(prob: float, color: str) -> str:
     )
 
 
-# ── Page session state ──────────────────────────────────────────────
-if "nav" in st.query_params:
-    st.session_state["page"] = st.query_params["nav"]
-if "page" not in st.session_state:
-    st.session_state["page"] = "Home"
+# ════════════════════════════════════════════════════════════
+#  Sidebar
+# ════════════════════════════════════════════════════════════
 
 with st.sidebar:
     # ── Brand header ──────────────────────────────────────
@@ -526,21 +475,20 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
 
-    st.markdown("---")
-    _cur = st.session_state["page"]
-    _nav_options = ["Home", "Train", "Analysis", "Inference"]
-    _items_html = ""
-    for _name in _nav_options:
-        _active_cls = " nav-active" if _name == _cur else ""
-        _items_html += (
-            f'  <a class="nav-item{_active_cls}" '
-            f'href="?nav={_name}" target="_self">{_name}</a>\n'
-        )
-    st.markdown(
-        f'<nav class="sidebar-nav">\n{_items_html}</nav>',
-        unsafe_allow_html=True,
+    # ── Theme toggle ────────────────────────────────────
+    _t_icon = "🌙  Dark Mode" if _current_theme == "light" else "☀️  Light Mode"
+    _t_tip = (
+        "Switch to dark theme" if _current_theme == "light" else "Switch to light theme"
     )
-    page = st.session_state["page"]
+    if st.button(_t_icon, use_container_width=True, on_click=toggle_theme, help=_t_tip):
+        pass  # on_click handles the toggle; Streamlit reruns automatically
+
+    st.markdown("---")
+    page = st.radio(
+        "Navigation",
+        ["🏠  Home", "🚀  Train", "📈  Analysis", "🔍  Inference"],
+        label_visibility="collapsed",
+    )
     st.markdown("---")
 
     # ── Active run selector ──────────────────────────────
@@ -592,7 +540,7 @@ with st.sidebar:
 #  Page: HOME
 # ════════════════════════════════════════════════════════════
 
-if page == "Home":
+if page == "🏠  Home":
     st.title("⚡ PMU Fault Classifier")
     st.markdown("#### PMU Edge AI Fault Classifier  —  Protocol v1.2")
     st.markdown("---")
@@ -739,7 +687,7 @@ if page == "Home":
 #  Page: TRAIN
 # ════════════════════════════════════════════════════════════
 
-elif page == "Train":
+elif page == "🚀  Train":
     st.title("🚀 Model Training")
     st.markdown("Configure hyperparameters and launch training.")
     st.markdown("---")
@@ -1065,7 +1013,7 @@ elif page == "Train":
 #  Page: ANALYSIS
 # ════════════════════════════════════════════════════════════
 
-elif page == "Analysis":
+elif page == "📈  Analysis":
     st.title("📈 Model Analysis")
     st.markdown(
         "Inspect fit curves, confusion matrix, classification report and "
@@ -1615,7 +1563,7 @@ elif page == "Analysis":
 #  Page: INFERENCE
 # ════════════════════════════════════════════════════════════
 
-elif page == "Inference":
+elif page == "🔍  Inference":
     st.title("🔍 Fault Inference")
     st.markdown(
         "Upload one or more Protocol v1.2 CSV files to classify fault types and "

@@ -89,108 +89,6 @@ css_path = GUI_DIR / "style.css"
 custom_css = css_path.read_text() if css_path.exists() else ""
 st.markdown(f"<style>{theme_vars}\n{custom_css}</style>", unsafe_allow_html=True)
 
-# ── Sliding pill animation (injected via iframe parent-frame JS) ──
-_SLIDING_PILL_JS = """
-<script>
-(function () {
-  var doc = window.parent.document;
-
-  function createPill(container) {
-    var existing = container.querySelector('.sp-pill');
-    if (existing) return existing;
-    var pill = doc.createElement('div');
-    pill.className = 'sp-pill';
-    container.appendChild(pill);
-    return pill;
-  }
-
-  function movePill(pill, targetEl, container, animate) {
-    requestAnimationFrame(function () {
-      var cRect = container.getBoundingClientRect();
-      var tRect = targetEl.getBoundingClientRect();
-      if (tRect.width === 0) return;
-      pill.style.transition = animate
-        ? 'left .26s cubic-bezier(.25,.8,.25,1),top .26s cubic-bezier(.25,.8,.25,1),width .26s cubic-bezier(.25,.8,.25,1),height .26s cubic-bezier(.25,.8,.25,1),opacity .18s ease'
-        : 'none';
-      pill.style.left   = (tRect.left   - cRect.left) + 'px';
-      pill.style.top    = (tRect.top    - cRect.top)  + 'px';
-      pill.style.width  = tRect.width   + 'px';
-      pill.style.height = tRect.height  + 'px';
-      pill.style.opacity = '1';
-    });
-  }
-
-  // ─── Tabs ───────────────────────────────────────────────
-  function setupTabList(tl) {
-    var pill = createPill(tl);
-    function upd(anim) {
-      var a = tl.querySelector('[aria-selected="true"]');
-      if (a) movePill(pill, a, tl, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      tl.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(tl, { attributes: true, subtree: true, attributeFilter: ['aria-selected'] });
-    }, 60);
-  }
-
-  // ─── Radio groups ────────────────────────────────────────
-  function setupRadio(rg) {
-    // rg is the [data-testid="stRadio"] > div:last-child element
-    var pill = createPill(rg);
-    function upd(anim) {
-      var checked = rg.querySelector('[aria-checked="true"]');
-      var label   = checked && checked.querySelector('label');
-      if (label) movePill(pill, label, rg, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      rg.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(rg, { attributes: true, subtree: true, attributeFilter: ['aria-checked'] });
-    }, 60);
-  }
-
-  // ─── Sidebar nav ─────────────────────────────────────────
-  function setupNav(nav) {
-    var pill = createPill(nav);
-    function upd(anim) {
-      var a = nav.querySelector('.nav-active');
-      if (a) movePill(pill, a, nav, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      nav.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(nav, { childList: true, subtree: true, attributes: true,
-                        attributeFilter: ['class'] });
-    }, 60);
-  }
-
-  var seen = new WeakSet();
-  function scan() {
-    // tab lists
-    doc.querySelectorAll('.stTabs [data-baseweb="tab-list"]').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupTabList(el); }
-    });
-    // radio groups: target the inner flex container
-    doc.querySelectorAll('[data-testid="stRadio"] > div:last-child').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupRadio(el); }
-    });
-    // sidebar nav
-    doc.querySelectorAll('.sidebar-nav').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupNav(el); }
-    });
-  }
-
-  new MutationObserver(scan).observe(doc.body, { childList: true, subtree: true });
-  scan();
-})();
-</script>
-"""
-_components.html(_SLIDING_PILL_JS, height=0)
-
 # ════════════════════════════════════════════════════════════
 #  Constants
 # ════════════════════════════════════════════════════════════
@@ -504,8 +402,6 @@ def prob_bar_html(prob: float, color: str) -> str:
 
 
 # ── Page session state ──────────────────────────────────────────────
-if "nav" in st.query_params:
-    st.session_state["page"] = st.query_params["nav"]
 if "page" not in st.session_state:
     st.session_state["page"] = "Home"
 
@@ -528,18 +424,22 @@ with st.sidebar:
 
     st.markdown("---")
     _cur = st.session_state["page"]
-    _nav_options = ["Home", "Train", "Analysis", "Inference"]
-    _items_html = ""
-    for _name in _nav_options:
-        _active_cls = " nav-active" if _name == _cur else ""
-        _items_html += (
-            f'  <a class="nav-item{_active_cls}" '
-            f'href="?nav={_name}" target="_self">{_name}</a>\n'
-        )
-    st.markdown(
-        f'<nav class="sidebar-nav">\n{_items_html}</nav>',
-        unsafe_allow_html=True,
-    )
+    _nav_items = [
+        ("🏠", "Home"),
+        ("🚀", "Train"),
+        ("📈", "Analysis"),
+        ("🔍", "Inference"),
+    ]
+    for _icon, _name in _nav_items:
+        _is_active = _cur == _name
+        if st.button(
+            f"{_icon}\u2002\u2002{_name}",
+            use_container_width=True,
+            key=f"nav_{_name}",
+            type="primary" if _is_active else "secondary",
+        ):
+            st.session_state["page"] = _name
+            st.rerun()
     page = st.session_state["page"]
     st.markdown("---")
 

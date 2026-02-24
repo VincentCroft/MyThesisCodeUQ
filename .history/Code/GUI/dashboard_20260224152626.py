@@ -49,38 +49,75 @@ st.set_page_config(
 )
 
 
-# Theme is fixed to dark
-_current_theme = "dark"
+# ── Theme Management ────────────────────────────────────────
+def toggle_theme():
+    config_path = THESIS / ".streamlit" / "config.toml"
+    config_path.parent.mkdir(exist_ok=True)
 
-theme_vars = """
+    current_theme = "dark"
+    if config_path.exists():
+        content = config_path.read_text()
+        if 'base="light"' in content.replace(" ", ""):
+            current_theme = "light"
+
+    new_theme = "light" if current_theme == "dark" else "dark"
+    config_path.write_text(f'[theme]\nbase="{new_theme}"\n')
+
+
+# Determine current theme
+_config_path = THESIS / ".streamlit" / "config.toml"
+_current_theme = "dark"
+if _config_path.exists():
+    _content = _config_path.read_text()
+    if 'base="light"' in _content.replace(" ", ""):
+        _current_theme = "light"
+
+if _current_theme == "dark":
+    theme_vars = """
     :root {
-        --bg-color: #080d1a;
-        --text-color: #e2e8f0;
-        --text-muted: #64748b;
-        --border-color: rgba(255,255,255,0.07);
+        --bg-color: #0f172a;
+        --text-color: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-color: rgba(255, 255, 255, 0.1);
         --accent-color: #38bdf8;
-        --accent-alt: #818cf8;
-        --accent-glow: rgba(56,189,248,0.40);
-        --accent-glow-soft: rgba(56,189,248,0.12);
-        --metric-bg: linear-gradient(145deg, rgba(30,41,59,0.90) 0%, rgba(15,23,42,0.95) 100%);
-        --card-bg: rgba(15,23,42,0.80);
-        --shadow-color: rgba(0,0,0,0.45);
-        --shadow-hover: rgba(0,0,0,0.65);
-        --shadow-ambient: rgba(0,0,0,0.20);
-        --glass-bg: rgba(15,23,42,0.60);
-        --glass-border: rgba(255,255,255,0.08);
-        --glass-border-top: rgba(255,255,255,0.14);
-        --glass-hover: rgba(30,41,59,0.80);
-        --input-bg: rgba(15,23,42,0.85);
-        --badge-normal-bg: rgba(6,78,59,0.85);    --badge-normal-text: #34d399;
-        --badge-slg-bg: rgba(124,45,18,0.85);     --badge-slg-text: #fb923c;
-        --badge-ll-bg: rgba(113,63,18,0.85);      --badge-ll-text: #fbbf24;
-        --badge-3p-bg: rgba(76,29,149,0.85);      --badge-3p-text: #c4b5fd;
-        --badge-unk-bg: rgba(30,41,59,0.85);      --badge-unk-text: #94a3b8;
-        --bar-bg: rgba(30,41,59,0.80);
-        --log-bg: rgba(5,8,18,0.95);
-        --log-text: #64748b;
-        --sidebar-bg: linear-gradient(180deg, rgba(8,13,26,0.98) 0%, rgba(10,16,30,0.99) 100%);
+        --metric-bg: rgba(30, 41, 59, 0.7);
+        --shadow-color: rgba(0, 0, 0, 0.4);
+        --badge-normal-bg: rgba(6, 78, 59, 0.8); --badge-normal-text: #34d399;
+        --badge-slg-bg: rgba(124, 45, 18, 0.8); --badge-slg-text: #fb923c;
+        --badge-ll-bg: rgba(113, 63, 18, 0.8); --badge-ll-text: #fbbf24;
+        --badge-3p-bg: rgba(76, 29, 149, 0.8); --badge-3p-text: #c4b5fd;
+        --badge-unk-bg: rgba(30, 41, 59, 0.8); --badge-unk-text: #94a3b8;
+        --bar-bg: rgba(255, 255, 255, 0.05);
+        --log-bg: rgba(15, 23, 42, 0.8);
+        --sidebar-bg: rgba(15, 23, 42, 0.6);
+        --expander-bg: rgba(30, 41, 59, 0.6);
+        --glass-bg: rgba(255, 255, 255, 0.05);
+        --glass-hover: rgba(255, 255, 255, 0.1);
+        --glass-border: rgba(255, 255, 255, 0.1);
+    }
+    """
+else:
+    theme_vars = """
+    :root {
+        --bg-color: #f8fafc;
+        --text-color: #0f172a;
+        --text-muted: #475569;
+        --border-color: rgba(0, 0, 0, 0.1);
+        --accent-color: #0284c7;
+        --metric-bg: rgba(255, 255, 255, 0.7);
+        --shadow-color: rgba(0, 0, 0, 0.05);
+        --badge-normal-bg: rgba(209, 250, 229, 0.8); --badge-normal-text: #065f46;
+        --badge-slg-bg: rgba(255, 237, 213, 0.8); --badge-slg-text: #9a3412;
+        --badge-ll-bg: rgba(254, 243, 199, 0.8); --badge-ll-text: #92400e;
+        --badge-3p-bg: rgba(237, 233, 254, 0.8); --badge-3p-text: #5b21b6;
+        --badge-unk-bg: rgba(241, 245, 249, 0.8); --badge-unk-text: #475569;
+        --bar-bg: rgba(0, 0, 0, 0.05);
+        --log-bg: rgba(248, 250, 252, 0.8);
+        --sidebar-bg: rgba(248, 250, 252, 0.6);
+        --expander-bg: rgba(255, 255, 255, 0.6);
+        --glass-bg: rgba(255, 255, 255, 0.6);
+        --glass-hover: rgba(255, 255, 255, 0.9);
+        --glass-border: rgba(0, 0, 0, 0.08);
     }
     """
 
@@ -88,108 +125,6 @@ theme_vars = """
 css_path = GUI_DIR / "style.css"
 custom_css = css_path.read_text() if css_path.exists() else ""
 st.markdown(f"<style>{theme_vars}\n{custom_css}</style>", unsafe_allow_html=True)
-
-# ── Sliding pill animation (injected via iframe parent-frame JS) ──
-_SLIDING_PILL_JS = """
-<script>
-(function () {
-  var doc = window.parent.document;
-
-  function createPill(container) {
-    var existing = container.querySelector('.sp-pill');
-    if (existing) return existing;
-    var pill = doc.createElement('div');
-    pill.className = 'sp-pill';
-    container.appendChild(pill);
-    return pill;
-  }
-
-  function movePill(pill, targetEl, container, animate) {
-    requestAnimationFrame(function () {
-      var cRect = container.getBoundingClientRect();
-      var tRect = targetEl.getBoundingClientRect();
-      if (tRect.width === 0) return;
-      pill.style.transition = animate
-        ? 'left .26s cubic-bezier(.25,.8,.25,1),top .26s cubic-bezier(.25,.8,.25,1),width .26s cubic-bezier(.25,.8,.25,1),height .26s cubic-bezier(.25,.8,.25,1),opacity .18s ease'
-        : 'none';
-      pill.style.left   = (tRect.left   - cRect.left) + 'px';
-      pill.style.top    = (tRect.top    - cRect.top)  + 'px';
-      pill.style.width  = tRect.width   + 'px';
-      pill.style.height = tRect.height  + 'px';
-      pill.style.opacity = '1';
-    });
-  }
-
-  // ─── Tabs ───────────────────────────────────────────────
-  function setupTabList(tl) {
-    var pill = createPill(tl);
-    function upd(anim) {
-      var a = tl.querySelector('[aria-selected="true"]');
-      if (a) movePill(pill, a, tl, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      tl.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(tl, { attributes: true, subtree: true, attributeFilter: ['aria-selected'] });
-    }, 60);
-  }
-
-  // ─── Radio groups ────────────────────────────────────────
-  function setupRadio(rg) {
-    // rg is the [data-testid="stRadio"] > div:last-child element
-    var pill = createPill(rg);
-    function upd(anim) {
-      var checked = rg.querySelector('[aria-checked="true"]');
-      var label   = checked && checked.querySelector('label');
-      if (label) movePill(pill, label, rg, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      rg.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(rg, { attributes: true, subtree: true, attributeFilter: ['aria-checked'] });
-    }, 60);
-  }
-
-  // ─── Sidebar nav ─────────────────────────────────────────
-  function setupNav(nav) {
-    var pill = createPill(nav);
-    function upd(anim) {
-      var a = nav.querySelector('.nav-active');
-      if (a) movePill(pill, a, nav, anim);
-    }
-    upd(false);
-    setTimeout(function () {
-      nav.classList.add('sp-ready');
-      new MutationObserver(function () { upd(true); })
-        .observe(nav, { childList: true, subtree: true, attributes: true,
-                        attributeFilter: ['class'] });
-    }, 60);
-  }
-
-  var seen = new WeakSet();
-  function scan() {
-    // tab lists
-    doc.querySelectorAll('.stTabs [data-baseweb="tab-list"]').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupTabList(el); }
-    });
-    // radio groups: target the inner flex container
-    doc.querySelectorAll('[data-testid="stRadio"] > div:last-child').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupRadio(el); }
-    });
-    // sidebar nav
-    doc.querySelectorAll('.sidebar-nav').forEach(function (el) {
-      if (!seen.has(el)) { seen.add(el); setupNav(el); }
-    });
-  }
-
-  new MutationObserver(scan).observe(doc.body, { childList: true, subtree: true });
-  scan();
-})();
-</script>
-"""
-_components.html(_SLIDING_PILL_JS, height=0)
 
 # ════════════════════════════════════════════════════════════
 #  Constants
@@ -224,6 +159,9 @@ ACCENT_YELLOW = "#fbbf24" if _current_theme == "dark" else "#d97706"
 ACCENT_PINK = "#f472b6" if _current_theme == "dark" else "#db2777"
 ACCENT_RED = "#ef4444" if _current_theme == "dark" else "#dc2626"
 
+LOG_BG = "#0f172a" if _current_theme == "dark" else "#f8fafc"
+LOG_BORDER = "#334155" if _current_theme == "dark" else "#cbd5e1"
+LOG_TEXT = "#94a3b8" if _current_theme == "dark" else "#475569"
 
 # ════════════════════════════════════════════════════════════
 #  Plotly iframe renderer  (eliminates Streamlit re-render
@@ -237,19 +175,14 @@ def _render_log(placeholder, lines: list[str], box_h: int = 380) -> None:
     import html as _html_mod
 
     content = _html_mod.escape("\n".join(lines[-200:]))
-    # Theme-aware colors
-    bg = "#0a0f1e" if _current_theme == "dark" else "#f1f5f9"
-    fg = "#94a3b8" if _current_theme == "dark" else "#475569"
-    brd = "#334155" if _current_theme == "dark" else "#cbd5e1"
     html_str = f"""\
 <!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box;}}
-body{{background:{bg};}}
+body{{background:{LOG_BG};}}
 #lb{{
-  background:{bg};border:1px solid {brd};border-radius:12px;
-  padding:14px;font-family:'Fira Code',Consolas,monospace;
-  font-size:0.8rem;color:{fg};
+  background:{LOG_BG};border:1px solid {LOG_BORDER};border-radius:8px;
+  padding:12px;font-family:monospace;font-size:0.78rem;color:{LOG_TEXT};
   height:{box_h}px;overflow-y:scroll;white-space:pre-wrap;
   scrollbar-width:none;-ms-overflow-style:none;
 }}
@@ -344,7 +277,7 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; }}
   html, body {{
-    background: #0f172a;
+    background: {PLOT_BG};
     width: 100%; height: 100%;
     overflow: hidden;
   }}
@@ -503,44 +436,27 @@ def prob_bar_html(prob: float, color: str) -> str:
     )
 
 
-# ── Page session state ──────────────────────────────────────────────
-if "nav" in st.query_params:
-    st.session_state["page"] = st.query_params["nav"]
-if "page" not in st.session_state:
-    st.session_state["page"] = "Home"
+# ════════════════════════════════════════════════════════════
+#  Sidebar
+# ════════════════════════════════════════════════════════════
 
 with st.sidebar:
-    # ── Brand header ──────────────────────────────────────
-    _accent = "#38bdf8" if _current_theme == "dark" else "#0284c7"
-    _muted = "#94a3b8" if _current_theme == "dark" else "#64748b"
-    st.markdown(
-        f"""<div style="padding:0.5rem 0 1rem;text-align:center;">
-  <div style="font-size:2rem;margin-bottom:4px;">⚡</div>
-  <div style="font-size:1.1rem;font-weight:800;color:{_accent};letter-spacing:0.5px;">
-    PMU Fault AI
-  </div>
-  <div style="font-size:0.72rem;color:{_muted};letter-spacing:1px;text-transform:uppercase;margin-top:2px;">
-    Protocol v1.2
-  </div>
-</div>""",
-        unsafe_allow_html=True,
-    )
+    st.markdown("## ⚡ PMU Fault AI")
+
+    # Theme toggle button
+    theme_icon = "🌙" if _current_theme == "dark" else "☀️"
+    theme_label = "Dark Mode" if _current_theme == "dark" else "Light Mode"
+    if st.button(
+        f"{theme_icon}  {theme_label}", use_container_width=True, on_click=toggle_theme
+    ):
+        pass  # The on_click callback handles the theme switch and Streamlit auto-reruns
 
     st.markdown("---")
-    _cur = st.session_state["page"]
-    _nav_options = ["Home", "Train", "Analysis", "Inference"]
-    _items_html = ""
-    for _name in _nav_options:
-        _active_cls = " nav-active" if _name == _cur else ""
-        _items_html += (
-            f'  <a class="nav-item{_active_cls}" '
-            f'href="?nav={_name}" target="_self">{_name}</a>\n'
-        )
-    st.markdown(
-        f'<nav class="sidebar-nav">\n{_items_html}</nav>',
-        unsafe_allow_html=True,
+    page = st.radio(
+        "Navigation",
+        ["🏠  Home", "🚀  Train", "📈  Analysis", "🔍  Inference"],
+        label_visibility="collapsed",
     )
-    page = st.session_state["page"]
     st.markdown("---")
 
     # ── Active run selector ──────────────────────────────
@@ -580,19 +496,14 @@ with st.sidebar:
         st.warning("⚠️  Not trained yet")
 
     st.markdown("---")
-    st.markdown(
-        f'<div style="text-align:center;font-size:0.7rem;color:{_muted};padding:0.25rem 0;">'
-        f"PyTorch &nbsp;·&nbsp; Streamlit &nbsp;·&nbsp; Protocol v1.2"
-        f"</div>",
-        unsafe_allow_html=True,
-    )
+    st.caption("Protocol v1.2  ·  PyTorch  ·  Streamlit")
 
 
 # ════════════════════════════════════════════════════════════
 #  Page: HOME
 # ════════════════════════════════════════════════════════════
 
-if page == "Home":
+if page == "🏠  Home":
     st.title("⚡ PMU Fault Classifier")
     st.markdown("#### PMU Edge AI Fault Classifier  —  Protocol v1.2")
     st.markdown("---")
@@ -636,7 +547,7 @@ if page == "Home":
             st.markdown(
                 f'<div style="display:flex;align-items:center;gap:10px;margin:6px 0;">'
                 f'<div style="width:14px;height:14px;border-radius:50%;background:{color};"></div>'
-                f'<span style="color:#e2e8f0;">{desc}</span>'
+                f'<span style="color:{TEXT_COLOR};">{desc}</span>'
                 f"</div>",
                 unsafe_allow_html=True,
             )
@@ -739,7 +650,7 @@ if page == "Home":
 #  Page: TRAIN
 # ════════════════════════════════════════════════════════════
 
-elif page == "Train":
+elif page == "🚀  Train":
     st.title("🚀 Model Training")
     st.markdown("Configure hyperparameters and launch training.")
     st.markdown("---")
@@ -930,13 +841,7 @@ elif page == "Train":
         )
     with ctrl_col3:
         if st.session_state.get("training_running", False):
-            st.markdown(
-                '<span class="train-running-badge">'
-                '<span class="train-dot"></span>'
-                "Training in progress…"
-                "</span>",
-                unsafe_allow_html=True,
-            )
+            st.info("🔄  Training in progress…")
 
     log_placeholder = st.empty()
     progress_placeholder = st.empty()
@@ -1065,7 +970,7 @@ elif page == "Train":
 #  Page: ANALYSIS
 # ════════════════════════════════════════════════════════════
 
-elif page == "Analysis":
+elif page == "📈  Analysis":
     st.title("📈 Model Analysis")
     st.markdown(
         "Inspect fit curves, confusion matrix, classification report and "
@@ -1137,7 +1042,7 @@ elif page == "Analysis":
                         y=[v * 100 for v in hist["train_acc"]],
                         name="Train Acc (%)",
                         mode="lines+markers",
-                        line=dict(color="#38bdf8", width=2),
+                        line=dict(color=ACCENT_BLUE, width=2),
                         marker=dict(size=4),
                     )
                 )
@@ -1147,25 +1052,25 @@ elif page == "Analysis":
                         y=[v * 100 for v in hist["val_acc"]],
                         name="Val Acc (%)",
                         mode="lines+markers",
-                        line=dict(color="#34d399", width=2),
+                        line=dict(color=ACCENT_GREEN, width=2),
                         marker=dict(size=4),
                     )
                 )
                 fig_acc.add_vline(
                     x=best_ep,
                     line_dash="dot",
-                    line_color="#fbbf24",
+                    line_color=ACCENT_YELLOW,
                     annotation_text=f"Best epoch {best_ep}",
-                    annotation_font_color="#fbbf24",
+                    annotation_font_color=ACCENT_YELLOW,
                 )
                 fig_acc.update_layout(
                     title="Accuracy Curve",
-                    paper_bgcolor="#0f172a",
-                    plot_bgcolor="#0f172a",
-                    font=dict(color="#94a3b8"),
-                    xaxis=dict(title="Epoch", gridcolor="#1e293b"),
-                    yaxis=dict(title="Accuracy (%)", gridcolor="#1e293b"),
-                    legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                    paper_bgcolor=PAPER_BG,
+                    plot_bgcolor=PLOT_BG,
+                    font=dict(color=TEXT_COLOR),
+                    xaxis=dict(title="Epoch", gridcolor=GRID_COLOR),
+                    yaxis=dict(title="Accuracy (%)", gridcolor=GRID_COLOR),
+                    legend=dict(bgcolor=LEGEND_BG, bordercolor=LEGEND_BORDER),
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=300,
                 )
@@ -1177,7 +1082,7 @@ elif page == "Analysis":
                         y=hist["train_loss"],
                         name="Train Loss",
                         mode="lines+markers",
-                        line=dict(color="#fb923c", width=2),
+                        line=dict(color=ACCENT_ORANGE, width=2),
                         marker=dict(size=4),
                     )
                 )
@@ -1187,19 +1092,19 @@ elif page == "Analysis":
                         y=hist["val_loss"],
                         name="Val Loss",
                         mode="lines+markers",
-                        line=dict(color="#f472b6", width=2, dash="dot"),
+                        line=dict(color=ACCENT_PINK, width=2, dash="dot"),
                         marker=dict(size=4),
                     )
                 )
-                fig_loss.add_vline(x=best_ep, line_dash="dot", line_color="#fbbf24")
+                fig_loss.add_vline(x=best_ep, line_dash="dot", line_color=ACCENT_YELLOW)
                 fig_loss.update_layout(
                     title="Loss Curve",
-                    paper_bgcolor="#0f172a",
-                    plot_bgcolor="#0f172a",
-                    font=dict(color="#94a3b8"),
-                    xaxis=dict(title="Epoch", gridcolor="#1e293b"),
-                    yaxis=dict(title="Loss", gridcolor="#1e293b"),
-                    legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                    paper_bgcolor=PAPER_BG,
+                    plot_bgcolor=PLOT_BG,
+                    font=dict(color=TEXT_COLOR),
+                    xaxis=dict(title="Epoch", gridcolor=GRID_COLOR),
+                    yaxis=dict(title="Loss", gridcolor=GRID_COLOR),
+                    legend=dict(bgcolor=LEGEND_BG, bordercolor=LEGEND_BORDER),
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=300,
                 )
@@ -1234,28 +1139,28 @@ elif page == "Analysis":
                         y=gap,
                         name="Train − Val Gap (%)",
                         fill="tozeroy",
-                        line=dict(color="#f472b6", width=2),
+                        line=dict(color=ACCENT_PINK, width=2),
                     )
                 )
                 fig_gap.add_hline(
                     y=5,
                     line_dash="dot",
-                    line_color="#fbbf24",
+                    line_color=ACCENT_YELLOW,
                     annotation_text="5 % threshold",
                 )
                 fig_gap.add_hline(
                     y=10,
                     line_dash="dot",
-                    line_color="#ef4444",
+                    line_color=ACCENT_RED,
                     annotation_text="10 % threshold",
                 )
                 fig_gap.update_layout(
                     title="Train − Val Accuracy Gap (overfit indicator)",
-                    paper_bgcolor="#0f172a",
-                    plot_bgcolor="#0f172a",
-                    font=dict(color="#94a3b8"),
-                    xaxis=dict(title="Epoch", gridcolor="#1e293b"),
-                    yaxis=dict(title="Gap (%)", gridcolor="#1e293b"),
+                    paper_bgcolor=PAPER_BG,
+                    plot_bgcolor=PLOT_BG,
+                    font=dict(color=TEXT_COLOR),
+                    xaxis=dict(title="Epoch", gridcolor=GRID_COLOR),
+                    yaxis=dict(title="Gap (%)", gridcolor=GRID_COLOR),
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=250,
                 )
@@ -1309,12 +1214,20 @@ elif page == "Analysis":
             ]
 
             if _PLOTLY:
-                colorscale = [
-                    [0.0, "#0f172a"],
-                    [0.3, "#1e3a5f"],
-                    [0.6, "#1d4ed8"],
-                    [1.0, "#38bdf8"],
-                ]
+                if _current_theme == "dark":
+                    colorscale = [
+                        [0.0, "#0f172a"],
+                        [0.3, "#1e3a5f"],
+                        [0.6, "#1d4ed8"],
+                        [1.0, "#38bdf8"],
+                    ]
+                else:
+                    colorscale = [
+                        [0.0, "#f8fafc"],
+                        [0.3, "#bae6fd"],
+                        [0.6, "#38bdf8"],
+                        [1.0, "#0284c7"],
+                    ]
                 fig_cm = ff.create_annotated_heatmap(
                     z=disp_matrix.tolist(),
                     x=cls_names,
@@ -1326,8 +1239,8 @@ elif page == "Analysis":
                 fig_cm.update_layout(
                     title="Confusion Matrix"
                     + (" (Normalised)" if use_norm else " (Raw Counts)"),
-                    paper_bgcolor="#0f172a",
-                    font=dict(color="#e2e8f0"),
+                    paper_bgcolor=PAPER_BG,
+                    font=dict(color=TEXT_COLOR),
                     xaxis=dict(title="Predicted", side="bottom"),
                     yaxis=dict(title="True", autorange="reversed"),
                     margin=dict(l=10, r=10, t=50, b=10),
@@ -1388,26 +1301,26 @@ elif page == "Analysis":
                             theta=metrics_radar + [metrics_radar[0]],
                             fill="toself",
                             name=cls,
-                            line=dict(color=CLASS_COLORS.get(cls, "#94a3b8"), width=2),
+                            line=dict(color=CLASS_COLORS.get(cls, TEXT_COLOR), width=2),
                             opacity=0.7,
                         )
                     )
                 radar_fig.update_layout(
                     polar=dict(
-                        bgcolor="#1e293b",
+                        bgcolor=LEGEND_BG,
                         radialaxis=dict(
                             visible=True,
                             range=[0, 1],
-                            gridcolor="#334155",
-                            color="#94a3b8",
+                            gridcolor=LEGEND_BORDER,
+                            color=TEXT_COLOR,
                         ),
-                        angularaxis=dict(gridcolor="#334155", color="#e2e8f0"),
+                        angularaxis=dict(gridcolor=LEGEND_BORDER, color=TEXT_COLOR),
                     ),
-                    paper_bgcolor="#0f172a",
-                    font=dict(color="#94a3b8"),
+                    paper_bgcolor=PAPER_BG,
+                    font=dict(color=TEXT_COLOR),
                     legend=dict(
-                        bgcolor="#1e293b",
-                        bordercolor="#334155",
+                        bgcolor=LEGEND_BG,
+                        bordercolor=LEGEND_BORDER,
                         orientation="h",
                         x=0.5,
                         xanchor="center",
@@ -1423,7 +1336,7 @@ elif page == "Analysis":
                 render_plotly(radar_fig, 460, "radar_fig")
 
                 f1_vals = [per[c]["f1"] for c in cls_names]
-                colors = [CLASS_COLORS.get(c, "#94a3b8") for c in cls_names]
+                colors = [CLASS_COLORS.get(c, TEXT_COLOR) for c in cls_names]
                 fig_f1 = go.Figure()
                 fig_f1.add_trace(
                     go.Bar(
@@ -1436,11 +1349,11 @@ elif page == "Analysis":
                 )
                 fig_f1.update_layout(
                     title="F1-Score per Class",
-                    paper_bgcolor="#0f172a",
-                    plot_bgcolor="#0f172a",
-                    font=dict(color="#94a3b8"),
-                    xaxis=dict(gridcolor="#1e293b"),
-                    yaxis=dict(range=[0, 1.1], gridcolor="#1e293b"),
+                    paper_bgcolor=PAPER_BG,
+                    plot_bgcolor=PLOT_BG,
+                    font=dict(color=TEXT_COLOR),
+                    xaxis=dict(gridcolor=GRID_COLOR),
+                    yaxis=dict(range=[0, 1.1], gridcolor=GRID_COLOR),
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=280,
                 )
@@ -1536,7 +1449,7 @@ elif page == "Analysis":
                             mode="markers",
                             name=cls,
                             marker=dict(
-                                color=CLASS_COLORS.get(cls, "#94a3b8"),
+                                color=CLASS_COLORS.get(cls, TEXT_COLOR),
                                 size=5,
                                 opacity=0.75,
                                 line=dict(width=0),
@@ -1545,24 +1458,24 @@ elif page == "Analysis":
                     )
                 fig_tsne.update_layout(
                     title="t-SNE Feature Cluster (validation set)",
-                    paper_bgcolor="#0f172a",
-                    plot_bgcolor="#0f172a",
-                    font=dict(color="#94a3b8"),
+                    paper_bgcolor=PAPER_BG,
+                    plot_bgcolor=PLOT_BG,
+                    font=dict(color=TEXT_COLOR),
                     xaxis=dict(
                         title="t-SNE Dim 1",
-                        gridcolor="#1e293b",
+                        gridcolor=GRID_COLOR,
                         zeroline=False,
                         showticklabels=False,
                     ),
                     yaxis=dict(
                         title="t-SNE Dim 2",
-                        gridcolor="#1e293b",
+                        gridcolor=GRID_COLOR,
                         zeroline=False,
                         showticklabels=False,
                     ),
                     legend=dict(
-                        bgcolor="#1e293b",
-                        bordercolor="#334155",
+                        bgcolor=LEGEND_BG,
+                        bordercolor=LEGEND_BORDER,
                         itemsizing="constant",
                         orientation="h",
                         x=0.5,
@@ -1589,18 +1502,18 @@ elif page == "Analysis":
                         x=dist["Class"],
                         y=dist["Count"],
                         marker_color=[
-                            CLASS_COLORS.get(c, "#94a3b8") for c in dist["Class"]
+                            CLASS_COLORS.get(c, TEXT_COLOR) for c in dist["Class"]
                         ],
                         text=dist["Count"],
                         textposition="outside",
                     )
                 )
                 fig_dist.update_layout(
-                    paper_bgcolor="#0f172a",
-                    plot_bgcolor="#0f172a",
-                    font=dict(color="#94a3b8"),
-                    xaxis=dict(gridcolor="#1e293b"),
-                    yaxis=dict(gridcolor="#1e293b"),
+                    paper_bgcolor=PAPER_BG,
+                    plot_bgcolor=PLOT_BG,
+                    font=dict(color=TEXT_COLOR),
+                    xaxis=dict(gridcolor=GRID_COLOR),
+                    yaxis=dict(gridcolor=GRID_COLOR),
                     margin=dict(l=10, r=10, t=20, b=10),
                     height=240,
                 )
@@ -1615,7 +1528,7 @@ elif page == "Analysis":
 #  Page: INFERENCE
 # ════════════════════════════════════════════════════════════
 
-elif page == "Inference":
+elif page == "🔍  Inference":
     st.title("🔍 Fault Inference")
     st.markdown(
         "Upload one or more Protocol v1.2 CSV files to classify fault types and "
@@ -1820,12 +1733,12 @@ elif page == "Inference":
                     st.markdown("**Primary Prediction**")
                     st.markdown(badge_html(pred_class), unsafe_allow_html=True)
                     st.markdown(
-                        f'<p style="color:#94a3b8;margin:4px 0;">'
+                        f'<p style="color:{TEXT_COLOR};margin:4px 0;">'
                         f'{CLASS_DESC.get(pred_class, "")}</p>',
                         unsafe_allow_html=True,
                     )
                     st.markdown(
-                        f'<p style="color:#38bdf8;font-size:2rem;font-weight:700;margin:0;">'
+                        f'<p style="color:{ACCENT_BLUE};font-size:2rem;font-weight:700;margin:0;">'
                         f"{pred_conf:.1%}</p>",
                         unsafe_allow_html=True,
                     )
@@ -1869,17 +1782,17 @@ elif page == "Inference":
                             )
                         )
                     fig2.update_layout(
-                        paper_bgcolor="#0f172a",
-                        plot_bgcolor="#0f172a",
-                        font=dict(color="#94a3b8"),
-                        xaxis=dict(title="Window Index", gridcolor="#1e293b"),
+                        paper_bgcolor=PAPER_BG,
+                        plot_bgcolor=PLOT_BG,
+                        font=dict(color=TEXT_COLOR),
+                        xaxis=dict(title="Window Index", gridcolor=GRID_COLOR),
                         yaxis=dict(
                             title="Probability",
                             tickformat=".0%",
-                            gridcolor="#1e293b",
+                            gridcolor=GRID_COLOR,
                             range=[0, 1],
                         ),
-                        legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                        legend=dict(bgcolor=LEGEND_BG, bordercolor=LEGEND_BORDER),
                         margin=dict(l=10, r=10, t=20, b=10),
                         height=280,
                     )

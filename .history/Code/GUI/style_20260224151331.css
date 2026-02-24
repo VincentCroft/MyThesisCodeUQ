@@ -1,0 +1,77 @@
+/* Code/GUI/style.css */
+html, body, [class*="css"] { font-family: "Inter", sans-serif; }
+
+div[data-testid="metric-container"] {
+    background: var(--metric-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 6px var(--shadow-color);
+    transition: all 0.3s ease;
+}
+div[data-testid="metric-container"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px var(--shadow-color);
+}
+div[data-testid="metric-container"] label {
+    color: var(--text-muted) !important; font-size: 0.85rem; font-weight: 500;
+}
+div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: var(--accent-color) !important; font-size: 1.8rem; font-weight: 700;
+}
+
+.section-header {
+    font-size: 1.2rem; font-weight: 600;
+    color: var(--accent-color); margin-bottom: 0.5rem;
+    border-left: 4px solid var(--accent-color); padding-left: 12px;
+    letter-spacing: 0.5px;
+}
+
+.fault-badge {
+    display: inline-block; padding: 6px 16px;
+    border-radius: 9999px; font-weight: 700;
+    font-size: 1rem; margin-bottom: 8px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+.badge-NORMAL            { background: var(--badge-normal-bg); color: var(--badge-normal-text); }
+.badge-SLG_FAULT         { background: var(--badge-slg-bg); color: var(--badge-slg-text); }
+.badge-LL_FAULT          { background: var(--badge-ll-bg); color: var(--badge-ll-text); }
+.badge-THREE_PHASE_FAULT { background: var(--badge-3p-bg); color: var(--badge-3p-text); }
+.badge-UNKNOWN           { background: var(--badge-unk-bg); color: var(--badge-unk-text); }
+
+.prob-bar-wrap { background: var(--bar-bg); border-radius: 8px; height: 14px;
+                 overflow: hidden; margin: 4px 0; }
+.prob-bar-fill { height: 100%; border-radius: 8px; transition: width .4s ease; }
+
+.log-box {
+    background: var(--log-bg); border: 1px solid var(--border-color);
+    border-radius: 8px; padding: 12px;
+    font-family: "Fira Code", monospace; font-size: 0.8rem;
+    color: var(--text-muted); max-height: 380px; overflow-y: auto;
+    white-space: pre-wrap;
+    box-shadow: inset 0 2px 4px var(--shadow-color);
+}
+
+[data-testid="stSidebar"] {
+    background: var(--sidebar-bg) !important;
+    border-right: 1px solid var(--border-color);
+}
+
+/* Modern button styling */
+.stButton > button {
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+.stButton > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px var(--shadow-color);
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+    font-weight: 600;
+    color: var(--text-color);
+    background-color: var(--expander-bg);
+    border-radius: 8px;
+}
