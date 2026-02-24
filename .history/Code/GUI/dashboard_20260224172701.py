@@ -143,31 +143,14 @@ _SLIDING_PILL_JS = """
       var a = rg.querySelector('[aria-checked="true"]');
       if (a) movePill(pill, a, rg, anim);
     }
-
-    // MutationObserver set up IMMEDIATELY so click animations fire
-    new MutationObserver(function () { upd(true); })
-      .observe(rg, { attributes: true, subtree: true, attributeFilter: ['aria-checked'] });
-
-    // Poll until the active element has non-zero size, THEN position pill
-    // and only THEN suppress the CSS fallback with sp-ready
-    function tryInit(attempts) {
-      var a = rg.querySelector('[aria-checked="true"]');
-      if (!a) return;
-      var rect = a.getBoundingClientRect();
-      if (rect.width === 0 && attempts < 30) {
-        setTimeout(function () { tryInit(attempts + 1); }, 40);
-        return;
-      }
-      // Layout is ready — position pill without animation, then enable sp-ready
-      pill.style.transition = 'none';
-      pill.style.left    = (rect.left   - rg.getBoundingClientRect().left) + 'px';
-      pill.style.top     = (rect.top    - rg.getBoundingClientRect().top)  + 'px';
-      pill.style.width   = rect.width  + 'px';
-      pill.style.height  = rect.height + 'px';
-      pill.style.opacity = '1';
-      requestAnimationFrame(function () { rg.classList.add('sp-ready'); });
-    }
-    requestAnimationFrame(function () { tryInit(0); });
+    upd(false);
+    requestAnimationFrame(function () { upd(false); }); // retry after first paint
+    setTimeout(function () {
+      upd(false); // one more retry after layout settles
+      rg.classList.add('sp-ready');
+      new MutationObserver(function () { upd(true); })
+        .observe(rg, { attributes: true, subtree: true, attributeFilter: ['aria-checked'] });
+    }, 100);
   }
 
   // ─── Sidebar nav (intercept clicks → no full reload) ─────

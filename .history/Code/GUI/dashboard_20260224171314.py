@@ -137,37 +137,19 @@ _SLIDING_PILL_JS = """
 
   // ─── Radio groups ────────────────────────────────────────
   function setupRadio(rg) {
-    // Mirrors setupTabList exactly: target [aria-checked="true"] wrapper directly
+    // rg is the [data-testid="stRadio"] > div:last-child element
     var pill = createPill(rg);
     function upd(anim) {
-      var a = rg.querySelector('[aria-checked="true"]');
-      if (a) movePill(pill, a, rg, anim);
+      var checked = rg.querySelector('[aria-checked="true"]');
+      var label   = checked && checked.querySelector('label');
+      if (label) movePill(pill, label, rg, anim);
     }
-
-    // MutationObserver set up IMMEDIATELY so click animations fire
-    new MutationObserver(function () { upd(true); })
-      .observe(rg, { attributes: true, subtree: true, attributeFilter: ['aria-checked'] });
-
-    // Poll until the active element has non-zero size, THEN position pill
-    // and only THEN suppress the CSS fallback with sp-ready
-    function tryInit(attempts) {
-      var a = rg.querySelector('[aria-checked="true"]');
-      if (!a) return;
-      var rect = a.getBoundingClientRect();
-      if (rect.width === 0 && attempts < 30) {
-        setTimeout(function () { tryInit(attempts + 1); }, 40);
-        return;
-      }
-      // Layout is ready — position pill without animation, then enable sp-ready
-      pill.style.transition = 'none';
-      pill.style.left    = (rect.left   - rg.getBoundingClientRect().left) + 'px';
-      pill.style.top     = (rect.top    - rg.getBoundingClientRect().top)  + 'px';
-      pill.style.width   = rect.width  + 'px';
-      pill.style.height  = rect.height + 'px';
-      pill.style.opacity = '1';
-      requestAnimationFrame(function () { rg.classList.add('sp-ready'); });
-    }
-    requestAnimationFrame(function () { tryInit(0); });
+    upd(false);
+    setTimeout(function () {
+      rg.classList.add('sp-ready');
+      new MutationObserver(function () { upd(true); })
+        .observe(rg, { attributes: true, subtree: true, attributeFilter: ['aria-checked'] });
+    }, 60);
   }
 
   // ─── Sidebar nav (intercept clicks → no full reload) ─────
@@ -208,18 +190,20 @@ _SLIDING_PILL_JS = """
       a.addEventListener('click', function (e) {
         e.preventDefault();
         var target = a.getAttribute('data-page');
-        // Visually update active state immediately
+        // Visually update active state immediately so pill can animate
         nav.querySelectorAll('.nav-item').forEach(function (item) {
           item.classList.toggle('nav-active', item.getAttribute('data-page') === target);
         });
-        upd(true);
-        // Click the hidden Streamlit button (triggers rerun, no browser reload)
-        var sidebar = doc.querySelector('[data-testid="stSidebar"]');
-        if (sidebar) {
-          sidebar.querySelectorAll('.stButton button').forEach(function (btn) {
-            if (btn.innerText.trim() === target) btn.click();
-          });
-        }
+        upd(true); // start sliding pill animation (0.26 s)
+        // Delay rerun until after the pill animation finishes
+        setTimeout(function () {
+          var sidebar = doc.querySelector('[data-testid="stSidebar"]');
+          if (sidebar) {
+            sidebar.querySelectorAll('.stButton button').forEach(function (btn) {
+              if (btn.innerText.trim() === target) btn.click();
+            });
+          }
+        }, 280);
       });
     });
 

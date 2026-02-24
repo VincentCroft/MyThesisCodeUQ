@@ -137,37 +137,35 @@ _SLIDING_PILL_JS = """
 
   // ─── Radio groups ────────────────────────────────────────
   function setupRadio(rg) {
-    // Mirrors setupTabList exactly: target [aria-checked="true"] wrapper directly
+    // rg is [data-testid="stRadio"] > div:last-child
     var pill = createPill(rg);
     function upd(anim) {
-      var a = rg.querySelector('[aria-checked="true"]');
-      if (a) movePill(pill, a, rg, anim);
-    }
-
-    // MutationObserver set up IMMEDIATELY so click animations fire
-    new MutationObserver(function () { upd(true); })
-      .observe(rg, { attributes: true, subtree: true, attributeFilter: ['aria-checked'] });
-
-    // Poll until the active element has non-zero size, THEN position pill
-    // and only THEN suppress the CSS fallback with sp-ready
-    function tryInit(attempts) {
-      var a = rg.querySelector('[aria-checked="true"]');
-      if (!a) return;
-      var rect = a.getBoundingClientRect();
-      if (rect.width === 0 && attempts < 30) {
-        setTimeout(function () { tryInit(attempts + 1); }, 40);
-        return;
+      // Try aria-checked first, fall back to checked input
+      var checked = rg.querySelector('[aria-checked="true"]') ||
+                    rg.querySelector('input:checked');
+      if (!checked) return;
+      var label = checked.querySelector('label') ||
+                  checked.closest('[data-baseweb="radio"]') &&
+                  checked.closest('[data-baseweb="radio"]').querySelector('label');
+      if (!label) {
+        // label IS the parent of the input in some Streamlit builds
+        label = checked.parentElement && checked.parentElement.tagName === 'LABEL'
+                  ? checked.parentElement
+                  : checked.closest('label');
       }
-      // Layout is ready — position pill without animation, then enable sp-ready
-      pill.style.transition = 'none';
-      pill.style.left    = (rect.left   - rg.getBoundingClientRect().left) + 'px';
-      pill.style.top     = (rect.top    - rg.getBoundingClientRect().top)  + 'px';
-      pill.style.width   = rect.width  + 'px';
-      pill.style.height  = rect.height + 'px';
-      pill.style.opacity = '1';
-      requestAnimationFrame(function () { rg.classList.add('sp-ready'); });
+      if (label) movePill(pill, label, rg, anim);
     }
-    requestAnimationFrame(function () { tryInit(0); });
+    upd(false);
+    setTimeout(function () {
+      rg.classList.add('sp-ready');
+      // Watch both aria-checked (BaseWeb) and any attribute change (fallback)
+      new MutationObserver(function () { upd(true); })
+        .observe(rg, {
+          attributes: true,
+          subtree: true,
+          attributeFilter: ['aria-checked', 'checked', 'class', 'data-checked'],
+        });
+    }, 80);
   }
 
   // ─── Sidebar nav (intercept clicks → no full reload) ─────
