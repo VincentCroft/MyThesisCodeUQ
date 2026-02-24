@@ -158,22 +158,12 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
     #   3. Minimum margin   l=70, b=60, r=20, t=50 so there is always room
     #      for a vertical Y-axis title even when automargin is not enough.
     import copy as _copy
-
     fig2 = _copy.deepcopy(fig)
 
     _STANDOFF = 20
-    _AXIS_KEYS = (
-        "xaxis",
-        "yaxis",
-        "xaxis2",
-        "yaxis2",
-        "xaxis3",
-        "yaxis3",
-        "xaxis4",
-        "yaxis4",
-        "xaxis5",
-        "yaxis5",
-    )
+    _AXIS_KEYS = ("xaxis", "yaxis", "xaxis2", "yaxis2",
+                  "xaxis3", "yaxis3", "xaxis4", "yaxis4",
+                  "xaxis5", "yaxis5")
     for _ak in _AXIS_KEYS:
         _ax = getattr(fig2.layout, _ak, None)
         if _ax is None:

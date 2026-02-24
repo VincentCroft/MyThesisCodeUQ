@@ -144,63 +144,29 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
       double-click = isolate / restore all).
     """
     import plotly.io as _pio
-    import json as _json
 
     _PLOTLY_RENDER_COUNTER[0] += 1
     div_id = f"plotly_div_{_PLOTLY_RENDER_COUNTER[0]}_{key}"
 
-    # ── Post-process layout before serialising ──────────────────────────
-    # We do this in Python so every chart benefits automatically:
-    #   1. automargin=True  on every axis  → Plotly auto-expands the margin
-    #      to fit tick labels + title without overlap.
-    #   2. standoff=20      on every axis title → guaranteed gap between
-    #      tick labels and the axis title text.
-    #   3. Minimum margin   l=70, b=60, r=20, t=50 so there is always room
-    #      for a vertical Y-axis title even when automargin is not enough.
-    import copy as _copy
-
-    fig2 = _copy.deepcopy(fig)
-
-    _STANDOFF = 20
-    _AXIS_KEYS = (
-        "xaxis",
-        "yaxis",
-        "xaxis2",
-        "yaxis2",
-        "xaxis3",
-        "yaxis3",
-        "xaxis4",
-        "yaxis4",
-        "xaxis5",
-        "yaxis5",
-    )
-    for _ak in _AXIS_KEYS:
-        _ax = getattr(fig2.layout, _ak, None)
+    # Serialise figure to JSON, then inject axis-title standoff so labels
+    # never overlap tick values across any chart.
+    _fig_dict = _pio.to_json(fig, validate=False)
+    import json as _json
+    _fd = _json.loads(_fig_dict)
+    _STANDOFF = 18   # pixels between tick labels and axis title
+    for _ax_key in ("xaxis", "yaxis", "xaxis2", "yaxis2",
+                    "xaxis3", "yaxis3", "xaxis4", "yaxis4"):
+        _ax = _fd.get("layout", {}).get(_ax_key)
         if _ax is None:
             continue
-        # automargin: Plotly will expand the plot margin automatically
-        _ax.automargin = True
-        # standoff: gap (px) between tick labels and axis title
-        _title_obj = _ax.title
-        if _title_obj is not None:
-            try:
-                _title_obj.standoff = _STANDOFF
-            except Exception:
-                pass
-
-    # Enforce a sensible minimum margin so the Y-axis title is never clipped
-    _m = fig2.layout.margin
-    if _m is not None:
-        if (_m.l is None) or (_m.l < 70):
-            _m.l = 70
-        if (_m.b is None) or (_m.b < 55):
-            _m.b = 55
-        if (_m.r is None) or (_m.r < 20):
-            _m.r = 20
-    else:
-        fig2.layout.margin = dict(l=70, r=20, t=50, b=55)
-
-    fig_json = _pio.to_json(fig2, validate=False)
+        _t = _ax.get("title")
+        if _t is None:
+            _ax["title"] = {"text": "", "standoff": _STANDOFF}
+        elif isinstance(_t, str):
+            _ax["title"] = {"text": _t, "standoff": _STANDOFF}
+        elif isinstance(_t, dict):
+            _t.setdefault("standoff", _STANDOFF)
+    fig_json = _json.dumps(_fd)
 
     html = f"""
 <!DOCTYPE html>
