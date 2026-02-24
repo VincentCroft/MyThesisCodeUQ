@@ -168,31 +168,31 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
         except Exception:
             pass
 
-    # 2. Margins — preserve each chart's own t and b so horizontal
-    #    bottom legends are never clipped.
+    # 2. Margins — use a fixed right margin large enough for the longest
+    #    class label "THREE_PHASE_FAULT" (~170 px at 12 px font size).
+    #    This is a floor; if the figure already has a larger r margin we keep it.
     _prev_t = None
-    _prev_b = None
+    _prev_r = 0
     try:
         _prev_t = lay.margin.t
     except Exception:
         pass
     try:
-        _prev_b = lay.margin.b
+        _prev_r = lay.margin.r or 0
     except Exception:
         pass
     lay.margin = dict(
         l=75,
+        r=max(int(_prev_r or 0), 175),
         t=(_prev_t or 50),
-        b=(_prev_b if _prev_b and _prev_b > 60 else 60),
+        b=60,
         pad=4,
     )
-    # Explicitly remove 'r' if it exists so Plotly auto-sizes it
-    lay.margin.r = None
 
-    # 3. Let JS measure the real container width and pass it explicitly.
-    #    autosize=True ensures Plotly calculates margin.r to fit the legend.
-    lay.autosize = True
-    lay.width = None   # placeholder; JS will fill this before newPlot
+    # 3. Width is set explicitly from JS; autosize=False so Plotly
+    #    honours our margin.r exactly and never re-calculates it.
+    lay.autosize = False
+    lay.width = None   # placeholder; JS fills this before newPlot
     lay.height = height
 
     fig_json = _pio.to_json(fig2, validate=False)
@@ -1223,22 +1223,12 @@ elif page == "📈  Analysis":
                     ),
                     paper_bgcolor="#0f172a",
                     font=dict(color="#94a3b8"),
-                    legend=dict(
-                        bgcolor="#1e293b",
-                        bordercolor="#334155",
-                        orientation="h",
-                        x=0.5,
-                        xanchor="center",
-                        y=-0.12,
-                        yanchor="top",
-                        entrywidth=170,
-                        entrywidthmode="pixels",
-                    ),
+                    legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
                     title="Per-Class Precision / Recall / F1 Radar",
-                    margin=dict(l=10, r=10, t=50, b=90),
-                    height=460,
+                    margin=dict(l=10, r=10, t=50, b=10),
+                    height=380,
                 )
-                render_plotly(radar_fig, 460, "radar_fig")
+                render_plotly(radar_fig, 380, "radar_fig")
 
                 f1_vals = [per[c]["f1"] for c in cls_names]
                 colors = [CLASS_COLORS.get(c, "#94a3b8") for c in cls_names]
@@ -1379,21 +1369,12 @@ elif page == "📈  Analysis":
                         showticklabels=False,
                     ),
                     legend=dict(
-                        bgcolor="#1e293b",
-                        bordercolor="#334155",
-                        itemsizing="constant",
-                        orientation="h",
-                        x=0.5,
-                        xanchor="center",
-                        y=-0.08,
-                        yanchor="top",
-                        entrywidth=170,
-                        entrywidthmode="pixels",
+                        bgcolor="#1e293b", bordercolor="#334155", itemsizing="constant"
                     ),
-                    margin=dict(l=10, r=10, t=50, b=90),
-                    height=600,
+                    margin=dict(l=10, r=10, t=50, b=10),
+                    height=520,
                 )
-                render_plotly(fig_tsne, 600, "fig_tsne")
+                render_plotly(fig_tsne, 520, "fig_tsne")
 
                 st.markdown("---")
                 st.markdown(
