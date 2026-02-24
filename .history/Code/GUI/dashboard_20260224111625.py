@@ -139,7 +139,10 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
       diffing never touches its interior, so legend clicks / trace
       isolation never cause a page re-render / flicker.
     • displaylogo=false  removes the "Produced with Plotly" button.
-    • A custom full-screen button is injected into the modebar.
+    • A custom full-screen overlay button is injected into the modebar.
+      Clicking it creates a fixed-position overlay div that covers the
+      entire browser viewport (works inside Streamlit iframes without
+      needing the Fullscreen API which is restricted by iframe sandbox).
     • Multi-select legend behaviour is kept (click = toggle one trace,
       double-click = isolate / restore all).
     """
@@ -159,108 +162,139 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; }}
-  html, body {{ background:#0f172a; overflow:hidden; width:100%; height:100%; }}
-  #chart-wrap {{ width:100%; height:{height}px; }}
+  html, body {{ background:#0f172a; overflow:hidden; }}
+
+  /* ── fullscreen overlay ──────────────────────────────── */
+  #fs-overlay {{
+    display: none;
+    position: fixed;
+    inset: 0;                    /* top/right/bottom/left = 0 */
+    z-index: 2147483647;         /* maximum z-index */
+    background: #0f172a;
+    flex-direction: column;
+  }}
+  #fs-overlay.active {{
+    display: flex;
+  }}
+  #fs-close {{
+    position: absolute;
+    top: 10px; right: 14px;
+    background: #1e293b;
+    color: #e2e8f0;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-family: sans-serif;
+    cursor: pointer;
+    z-index: 1;
+  }}
+  #fs-close:hover {{ background: #334155; }}
+  #fs-plot {{ width:100%; flex:1; }}
 </style>
 </head>
 <body>
-<div id="chart-wrap">
-  <div id="{div_id}" style="width:100%;height:100%;"></div>
+
+<!-- normal (inline) chart div -->
+<div id="{div_id}" style="width:100%;height:{height}px;"></div>
+
+<!-- fullscreen overlay (fixed, covers whole viewport) -->
+<div id="fs-overlay">
+  <button id="fs-close">✕  Exit Fullscreen</button>
+  <div id="fs-plot"></div>
 </div>
+
 <script>
 (function(){{
-  var fig     = {fig_json};
-  var divId   = '{div_id}';
-  var normalH = {height};
-  var normalW = null;   // null = let Plotly be responsive
+  var NORMAL_HEIGHT = {height};
+  var divId  = '{div_id}';
+  var fig    = {fig_json};
+  var isFS   = false;
 
-  /* ── Pre-relayout helper ─────────────────────────────────
-     Called BEFORE the browser paints the fullscreen frame so
-     there is zero visible intermediate state.               */
-  function relayoutFS(entering) {{
-    if (entering) {{
-      Plotly.relayout(divId, {{
-        width:  screen.width,
-        height: screen.height,
-      }});
-    }} else {{
-      Plotly.relayout(divId, {{
-        width:  normalW,
-        height: normalH,
-      }});
-    }}
-  }}
+  // ── fullscreen icon (four-corner arrows) ─────────────
+  var fsIcon = {{
+    width: 500, height: 500, ascent: 500, descent: 0,
+    path: 'M 0 0 L 160 0 L 160 55 L 55 55 L 55 160 L 0 160 Z '
+        + 'M 340 0 L 500 0 L 500 160 L 445 160 L 445 55 L 340 55 Z '
+        + 'M 0 340 L 55 340 L 55 445 L 160 445 L 160 500 L 0 500 Z '
+        + 'M 445 340 L 500 340 L 500 500 L 340 500 L 340 445 L 445 445 Z',
+  }};
 
   var config = {{
     displaylogo: false,
-    responsive: false,          // we manage sizing ourselves
+    responsive: true,
     modeBarButtonsToRemove: [],
     modeBarButtonsToAdd: [{{
-      name: 'Full screen',
-      icon: {{
-        width: 500, height: 500,
-        path: 'M 0 0 L 180 0 L 180 60 L 60 60 L 60 180 L 0 180 Z '
-            + 'M 320 0 L 500 0 L 500 180 L 440 180 L 440 60 L 320 60 Z '
-            + 'M 0 320 L 60 320 L 60 440 L 180 440 L 180 500 L 0 500 Z '
-            + 'M 440 320 L 500 320 L 500 500 L 320 500 L 320 440 L 440 440 Z',
-        ascent: 500, descent: 0,
-      }},
-      click: function() {{
-        var isFS = !!(document.fullscreenElement
-                   || document.webkitFullscreenElement
-                   || document.mozFullScreenElement);
-        var doc = document.documentElement;
-        if (!isFS) {{
-          /* Relayout to full-screen size FIRST, then request fullscreen.
-             The browser will use the already-rendered large figure,
-             so there is no small→large jump.                          */
-          relayoutFS(true);
-          var req = doc.requestFullscreen
-                 || doc.webkitRequestFullscreen
-                 || doc.mozRequestFullScreen
-                 || doc.msRequestFullscreen;
-          if (req) req.call(doc).catch(function(){{}});
-        }} else {{
-          /* Shrink first so the figure never appears large inside the
-             small iframe after exiting fullscreen.                     */
-          relayoutFS(false);
-          var exit = document.exitFullscreen
-                  || document.webkitExitFullscreen
-                  || document.mozCancelFullScreen
-                  || document.msExitFullscreen;
-          if (exit) exit.call(document);
-        }}
-      }}
+      name: 'Fullscreen',
+      icon: fsIcon,
+      click: function() {{ openFS(); }}
     }}],
   }};
 
-  /* Initial render at normal size */
-  Plotly.newPlot(divId, fig.data, fig.layout, config).then(function(){{
-    /* Capture the rendered width so we can restore it precisely */
-    normalW = document.getElementById(divId).offsetWidth || null;
+  // Draw the normal-size chart
+  Plotly.newPlot(divId, fig.data, fig.layout, config);
+
+  // ── open fullscreen overlay ───────────────────────────
+  function openFS() {{
+    if (isFS) return;
+    isFS = true;
+
+    var overlay = document.getElementById('fs-overlay');
+    var fsPlot  = document.getElementById('fs-plot');
+    overlay.classList.add('active');
+
+    var w = window.innerWidth  || document.documentElement.clientWidth;
+    var h = window.innerHeight || document.documentElement.clientHeight;
+
+    // Clone layout, override dimensions
+    var fsLayout = Object.assign({{}}, fig.layout, {{
+      width:  w,
+      height: h - 50,   // leave room for close button
+      paper_bgcolor: '#0f172a',
+      plot_bgcolor:  '#0f172a',
+    }});
+
+    Plotly.newPlot('fs-plot', fig.data, fsLayout, {{
+      displaylogo: false,
+      responsive: true,
+      modeBarButtonsToRemove: [],
+    }});
+
+    // Adjust on window resize while in FS
+    window.addEventListener('resize', onFSResize);
+  }}
+
+  // ── close fullscreen overlay ──────────────────────────
+  function closeFS() {{
+    if (!isFS) return;
+    isFS = false;
+
+    var overlay = document.getElementById('fs-overlay');
+    overlay.classList.remove('active');
+    Plotly.purge('fs-plot');
+    window.removeEventListener('resize', onFSResize);
+  }}
+
+  function onFSResize() {{
+    var w = window.innerWidth  || document.documentElement.clientWidth;
+    var h = window.innerHeight || document.documentElement.clientHeight;
+    Plotly.relayout('fs-plot', {{ width: w, height: h - 50 }});
+  }}
+
+  document.getElementById('fs-close').addEventListener('click', closeFS);
+
+  // Also close on Escape key
+  document.addEventListener('keydown', function(e) {{
+    if (e.key === 'Escape') closeFS();
   }});
 
-  /* Safety net: if the user exits fullscreen via Esc key,
-     we still restore the layout correctly.                  */
-  function onFSChange() {{
-    var inFS = !!(document.fullscreenElement
-              || document.webkitFullscreenElement
-              || document.mozFullScreenElement);
-    if (!inFS) {{
-      relayoutFS(false);
-    }}
-  }}
-  document.addEventListener('fullscreenchange',       onFSChange);
-  document.addEventListener('webkitfullscreenchange', onFSChange);
-  document.addEventListener('mozfullscreenchange',    onFSChange);
-  document.addEventListener('MSFullscreenChange',     onFSChange);
 }})();
 </script>
 </body>
 </html>
 """
-    # iframe height: add 30 px for the modebar
-    _components.html(html, height=height + 30, scrolling=False)
+    # iframe height: normal chart + a little room for the modebar
+    _components.html(html, height=height + 32, scrolling=False)
 
 
 # ════════════════════════════════════════════════════════════

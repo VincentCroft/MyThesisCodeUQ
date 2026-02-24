@@ -125,145 +125,6 @@ PYTHON_EXE = sys.executable
 
 
 # ════════════════════════════════════════════════════════════
-#  Plotly iframe renderer  (eliminates Streamlit re-render
-#  flicker and enables proper legend toggle behaviour)
-# ════════════════════════════════════════════════════════════
-_PLOTLY_RENDER_COUNTER: list[int] = [0]  # mutable counter for unique div ids
-
-
-def render_plotly(fig, height: int = 400, key: str = "") -> None:
-    """Render a Plotly figure inside a stable <iframe> via components.html().
-
-    Benefits vs st.plotly_chart():
-    • The iframe is an independent document — Streamlit's Virtual-DOM
-      diffing never touches its interior, so legend clicks / trace
-      isolation never cause a page re-render / flicker.
-    • displaylogo=false  removes the "Produced with Plotly" button.
-    • A custom full-screen button is injected into the modebar.
-    • Multi-select legend behaviour is kept (click = toggle one trace,
-      double-click = isolate / restore all).
-    """
-    import plotly.io as _pio
-
-    _PLOTLY_RENDER_COUNTER[0] += 1
-    div_id = f"plotly_div_{_PLOTLY_RENDER_COUNTER[0]}_{key}"
-
-    # Serialise figure to JSON (no inline JS library — load from CDN once)
-    fig_json = _pio.to_json(fig)
-
-    html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
-<style>
-  * {{ margin:0; padding:0; box-sizing:border-box; }}
-  html, body {{ background:#0f172a; overflow:hidden; width:100%; height:100%; }}
-  #chart-wrap {{ width:100%; height:{height}px; }}
-</style>
-</head>
-<body>
-<div id="chart-wrap">
-  <div id="{div_id}" style="width:100%;height:100%;"></div>
-</div>
-<script>
-(function(){{
-  var fig     = {fig_json};
-  var divId   = '{div_id}';
-  var normalH = {height};
-  var normalW = null;   // null = let Plotly be responsive
-
-  /* ── Pre-relayout helper ─────────────────────────────────
-     Called BEFORE the browser paints the fullscreen frame so
-     there is zero visible intermediate state.               */
-  function relayoutFS(entering) {{
-    if (entering) {{
-      Plotly.relayout(divId, {{
-        width:  screen.width,
-        height: screen.height,
-      }});
-    }} else {{
-      Plotly.relayout(divId, {{
-        width:  normalW,
-        height: normalH,
-      }});
-    }}
-  }}
-
-  var config = {{
-    displaylogo: false,
-    responsive: false,          // we manage sizing ourselves
-    modeBarButtonsToRemove: [],
-    modeBarButtonsToAdd: [{{
-      name: 'Full screen',
-      icon: {{
-        width: 500, height: 500,
-        path: 'M 0 0 L 180 0 L 180 60 L 60 60 L 60 180 L 0 180 Z '
-            + 'M 320 0 L 500 0 L 500 180 L 440 180 L 440 60 L 320 60 Z '
-            + 'M 0 320 L 60 320 L 60 440 L 180 440 L 180 500 L 0 500 Z '
-            + 'M 440 320 L 500 320 L 500 500 L 320 500 L 320 440 L 440 440 Z',
-        ascent: 500, descent: 0,
-      }},
-      click: function() {{
-        var isFS = !!(document.fullscreenElement
-                   || document.webkitFullscreenElement
-                   || document.mozFullScreenElement);
-        var doc = document.documentElement;
-        if (!isFS) {{
-          /* Relayout to full-screen size FIRST, then request fullscreen.
-             The browser will use the already-rendered large figure,
-             so there is no small→large jump.                          */
-          relayoutFS(true);
-          var req = doc.requestFullscreen
-                 || doc.webkitRequestFullscreen
-                 || doc.mozRequestFullScreen
-                 || doc.msRequestFullscreen;
-          if (req) req.call(doc).catch(function(){{}});
-        }} else {{
-          /* Shrink first so the figure never appears large inside the
-             small iframe after exiting fullscreen.                     */
-          relayoutFS(false);
-          var exit = document.exitFullscreen
-                  || document.webkitExitFullscreen
-                  || document.mozCancelFullScreen
-                  || document.msExitFullscreen;
-          if (exit) exit.call(document);
-        }}
-      }}
-    }}],
-  }};
-
-  /* Initial render at normal size */
-  Plotly.newPlot(divId, fig.data, fig.layout, config).then(function(){{
-    /* Capture the rendered width so we can restore it precisely */
-    normalW = document.getElementById(divId).offsetWidth || null;
-  }});
-
-  /* Safety net: if the user exits fullscreen via Esc key,
-     we still restore the layout correctly.                  */
-  function onFSChange() {{
-    var inFS = !!(document.fullscreenElement
-              || document.webkitFullscreenElement
-              || document.mozFullScreenElement);
-    if (!inFS) {{
-      relayoutFS(false);
-    }}
-  }}
-  document.addEventListener('fullscreenchange',       onFSChange);
-  document.addEventListener('webkitfullscreenchange', onFSChange);
-  document.addEventListener('mozfullscreenchange',    onFSChange);
-  document.addEventListener('MSFullscreenChange',     onFSChange);
-}})();
-</script>
-</body>
-</html>
-"""
-    # iframe height: add 30 px for the modebar
-    _components.html(html, height=height + 30, scrolling=False)
-
-
-# ════════════════════════════════════════════════════════════
 #  Run management helpers
 # ════════════════════════════════════════════════════════════
 
@@ -522,7 +383,7 @@ if page == "🏠  Home":
                 xaxis=dict(title="Epoch", gridcolor="#1e293b", color="#94a3b8"),
                 height=320,
             )
-            render_plotly(fig, height=320, key="home_history")
+            st.plotly_chart(fig, use_container_width=True)
         except ImportError:
             st.line_chart({"Val Acc": hist["val_acc"], "Train Acc": hist["train_acc"]})
     else:
@@ -943,9 +804,15 @@ elif page == "📈  Analysis":
                     font=dict(color="#94a3b8"),
                     xaxis=dict(title="Epoch", gridcolor="#1e293b"),
                     yaxis=dict(title="Accuracy (%)", gridcolor="#1e293b"),
-                    legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                    legend=dict(
+                        bgcolor="#1e293b",
+                        bordercolor="#334155",
+                        itemclick="toggle",
+                        itemdoubleclick="toggleothers",
+                    ),
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=300,
+                    uirevision=f"acc_{_sel_run}",
                 )
 
                 fig_loss = go.Figure()
@@ -977,16 +844,26 @@ elif page == "📈  Analysis":
                     font=dict(color="#94a3b8"),
                     xaxis=dict(title="Epoch", gridcolor="#1e293b"),
                     yaxis=dict(title="Loss", gridcolor="#1e293b"),
-                    legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                    legend=dict(
+                        bgcolor="#1e293b",
+                        bordercolor="#334155",
+                        itemclick="toggle",
+                        itemdoubleclick="toggleothers",
+                    ),
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=300,
+                    uirevision=f"loss_{_sel_run}",
                 )
 
                 col_a, col_b = st.columns(2)
                 with col_a:
-                    render_plotly(fig_acc, height=300, key="curve_acc")
+                    st.plotly_chart(
+                        fig_acc, use_container_width=True, key=f"fig_acc_{_sel_run}"
+                    )
                 with col_b:
-                    render_plotly(fig_loss, height=300, key="curve_loss")
+                    st.plotly_chart(
+                        fig_loss, use_container_width=True, key=f"fig_loss_{_sel_run}"
+                    )
             else:
                 st.line_chart(
                     {"Train Acc": hist["train_acc"], "Val Acc": hist["val_acc"]}
@@ -1034,10 +911,19 @@ elif page == "📈  Analysis":
                     font=dict(color="#94a3b8"),
                     xaxis=dict(title="Epoch", gridcolor="#1e293b"),
                     yaxis=dict(title="Gap (%)", gridcolor="#1e293b"),
+                    legend=dict(
+                        bgcolor="#1e293b",
+                        bordercolor="#334155",
+                        itemclick="toggle",
+                        itemdoubleclick="toggleothers",
+                    ),
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=250,
+                    uirevision=f"gap_{_sel_run}",
                 )
-                render_plotly(fig_gap, height=250, key="curve_gap")
+                st.plotly_chart(
+                    fig_gap, use_container_width=True, key=f"fig_gap_{_sel_run}"
+                )
 
             final_gap = gap[-1]
             if final_gap < 3:
@@ -1110,8 +996,13 @@ elif page == "📈  Analysis":
                     yaxis=dict(title="True", autorange="reversed"),
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=420,
+                    uirevision=f"cm_{_sel_run}_{use_norm}",
                 )
-                render_plotly(fig_cm, height=420, key="cm_heatmap")
+                st.plotly_chart(
+                    fig_cm,
+                    use_container_width=True,
+                    key=f"fig_cm_{_sel_run}_{use_norm}",
+                )
             else:
                 df_cm = pd.DataFrame(disp_matrix, index=cls_names, columns=cls_names)
                 st.dataframe(df_cm, use_container_width=True)
@@ -1183,12 +1074,20 @@ elif page == "📈  Analysis":
                     ),
                     paper_bgcolor="#0f172a",
                     font=dict(color="#94a3b8"),
-                    legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                    legend=dict(
+                        bgcolor="#1e293b",
+                        bordercolor="#334155",
+                        itemclick="toggle",
+                        itemdoubleclick="toggleothers",
+                    ),
                     title="Per-Class Precision / Recall / F1 Radar",
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=380,
+                    uirevision=f"radar_{_sel_run}",
                 )
-                render_plotly(radar_fig, height=380, key="report_radar")
+                st.plotly_chart(
+                    radar_fig, use_container_width=True, key=f"fig_radar_{_sel_run}"
+                )
 
                 f1_vals = [per[c]["f1"] for c in cls_names]
                 colors = [CLASS_COLORS.get(c, "#94a3b8") for c in cls_names]
@@ -1211,8 +1110,11 @@ elif page == "📈  Analysis":
                     yaxis=dict(range=[0, 1.1], gridcolor="#1e293b"),
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=280,
+                    uirevision=f"f1_{_sel_run}",
                 )
-                render_plotly(fig_f1, height=280, key="report_f1bar")
+                st.plotly_chart(
+                    fig_f1, use_container_width=True, key=f"fig_f1_{_sel_run}"
+                )
 
             rows = []
             for cls, m in cm_data["per_class"].items():
@@ -1329,12 +1231,19 @@ elif page == "📈  Analysis":
                         showticklabels=False,
                     ),
                     legend=dict(
-                        bgcolor="#1e293b", bordercolor="#334155", itemsizing="constant"
+                        bgcolor="#1e293b",
+                        bordercolor="#334155",
+                        itemsizing="constant",
+                        itemclick="toggle",
+                        itemdoubleclick="toggleothers",
                     ),
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=520,
+                    uirevision=f"tsne_{_sel_run}",
                 )
-                render_plotly(fig_tsne, height=520, key="tsne_scatter")
+                st.plotly_chart(
+                    fig_tsne, use_container_width=True, key=f"fig_tsne_{_sel_run}"
+                )
 
                 st.markdown("---")
                 st.markdown(
@@ -1362,8 +1271,11 @@ elif page == "📈  Analysis":
                     yaxis=dict(gridcolor="#1e293b"),
                     margin=dict(l=10, r=10, t=20, b=10),
                     height=240,
+                    uirevision=f"dist_{_sel_run}",
                 )
-                render_plotly(fig_dist, height=240, key="tsne_dist_bar")
+                st.plotly_chart(
+                    fig_dist, use_container_width=True, key=f"fig_dist_{_sel_run}"
+                )
             else:
                 st.scatter_chart(
                     df_tsne[["x", "y", "label_name"]], x="x", y="y", color="label_name"
@@ -1638,11 +1550,19 @@ elif page == "🔍  Inference":
                             gridcolor="#1e293b",
                             range=[0, 1],
                         ),
-                        legend=dict(bgcolor="#1e293b", bordercolor="#334155"),
+                        legend=dict(
+                            bgcolor="#1e293b",
+                            bordercolor="#334155",
+                            itemclick="toggle",
+                            itemdoubleclick="toggleothers",
+                        ),
                         margin=dict(l=10, r=10, t=20, b=10),
                         height=280,
+                        uirevision=f"infer_{fname}",
                     )
-                    render_plotly(fig2, height=280, key=f"infer_prob_{fname}")
+                    st.plotly_chart(
+                        fig2, use_container_width=True, key=f"fig_infer_{fname}"
+                    )
                 except ImportError:
                     st.line_chart(pd.DataFrame(all_probs, columns=CLASS_NAMES))
 

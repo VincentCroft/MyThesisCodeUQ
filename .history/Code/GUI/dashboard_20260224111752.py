@@ -159,8 +159,29 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; }}
-  html, body {{ background:#0f172a; overflow:hidden; width:100%; height:100%; }}
-  #chart-wrap {{ width:100%; height:{height}px; }}
+  html, body {{
+    background:#0f172a;
+    overflow:hidden;
+    width:100%;
+    height:{height}px;
+  }}
+  #chart-wrap {{
+    width:100%;
+    height:{height}px;
+  }}
+  /* When the document itself is fullscreen, fill the whole screen */
+  :fullscreen #chart-wrap,
+  :-webkit-full-screen #chart-wrap,
+  :-moz-full-screen #chart-wrap,
+  :-ms-fullscreen #chart-wrap {{
+    width:100vw;
+    height:100vh;
+  }}
+  :fullscreen body,
+  :-webkit-full-screen body {{
+    height:100vh;
+    overflow:hidden;
+  }}
 </style>
 </head>
 <body>
@@ -169,61 +190,41 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 </div>
 <script>
 (function(){{
-  var fig     = {fig_json};
-  var divId   = '{div_id}';
+  var fig   = {fig_json};
+  var divId = '{div_id}';
   var normalH = {height};
-  var normalW = null;   // null = let Plotly be responsive
-
-  /* ── Pre-relayout helper ─────────────────────────────────
-     Called BEFORE the browser paints the fullscreen frame so
-     there is zero visible intermediate state.               */
-  function relayoutFS(entering) {{
-    if (entering) {{
-      Plotly.relayout(divId, {{
-        width:  screen.width,
-        height: screen.height,
-      }});
-    }} else {{
-      Plotly.relayout(divId, {{
-        width:  normalW,
-        height: normalH,
-      }});
-    }}
-  }}
 
   var config = {{
     displaylogo: false,
-    responsive: false,          // we manage sizing ourselves
+    responsive: true,
     modeBarButtonsToRemove: [],
     modeBarButtonsToAdd: [{{
       name: 'Full screen',
       icon: {{
-        width: 500, height: 500,
+        width: 500,
+        height: 500,
         path: 'M 0 0 L 180 0 L 180 60 L 60 60 L 60 180 L 0 180 Z '
             + 'M 320 0 L 500 0 L 500 180 L 440 180 L 440 60 L 320 60 Z '
             + 'M 0 320 L 60 320 L 60 440 L 180 440 L 180 500 L 0 500 Z '
             + 'M 440 320 L 500 320 L 500 500 L 320 500 L 320 440 L 440 440 Z',
-        ascent: 500, descent: 0,
+        ascent: 500,
+        descent: 0,
       }},
-      click: function() {{
-        var isFS = !!(document.fullscreenElement
-                   || document.webkitFullscreenElement
-                   || document.mozFullScreenElement);
-        var doc = document.documentElement;
-        if (!isFS) {{
-          /* Relayout to full-screen size FIRST, then request fullscreen.
-             The browser will use the already-rendered large figure,
-             so there is no small→large jump.                          */
-          relayoutFS(true);
+      click: function(gd) {{
+        var doc = document.documentElement;  // <html> — fullscreen entire page
+        if (!document.fullscreenElement &&
+            !document.webkitFullscreenElement &&
+            !document.mozFullScreenElement) {{
           var req = doc.requestFullscreen
                  || doc.webkitRequestFullscreen
                  || doc.mozRequestFullScreen
                  || doc.msRequestFullscreen;
-          if (req) req.call(doc).catch(function(){{}});
+          if (req) {{
+            req.call(doc).then(function(){{
+              // relayout happens in fullscreenchange handler
+            }}).catch(function(){{}});
+          }}
         }} else {{
-          /* Shrink first so the figure never appears large inside the
-             small iframe after exiting fullscreen.                     */
-          relayoutFS(false);
           var exit = document.exitFullscreen
                   || document.webkitExitFullscreen
                   || document.mozCancelFullScreen
@@ -234,26 +235,32 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
     }}],
   }};
 
-  /* Initial render at normal size */
-  Plotly.newPlot(divId, fig.data, fig.layout, config).then(function(){{
-    /* Capture the rendered width so we can restore it precisely */
-    normalW = document.getElementById(divId).offsetWidth || null;
-  }});
+  Plotly.newPlot(divId, fig.data, fig.layout, config);
 
-  /* Safety net: if the user exits fullscreen via Esc key,
-     we still restore the layout correctly.                  */
-  function onFSChange() {{
+  function onFullscreenChange() {{
     var inFS = !!(document.fullscreenElement
               || document.webkitFullscreenElement
               || document.mozFullScreenElement);
-    if (!inFS) {{
-      relayoutFS(false);
+    if (inFS) {{
+      // Let the CSS set the wrap to 100vw × 100vh, then relayout
+      setTimeout(function(){{
+        Plotly.relayout(divId, {{
+          width:  window.innerWidth,
+          height: window.innerHeight - 4,
+        }});
+      }}, 50);
+    }} else {{
+      Plotly.relayout(divId, {{
+        width:  null,   // revert to responsive
+        height: normalH,
+      }});
     }}
   }}
-  document.addEventListener('fullscreenchange',       onFSChange);
-  document.addEventListener('webkitfullscreenchange', onFSChange);
-  document.addEventListener('mozfullscreenchange',    onFSChange);
-  document.addEventListener('MSFullscreenChange',     onFSChange);
+
+  document.addEventListener('fullscreenchange',       onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+  document.addEventListener('mozfullscreenchange',    onFullscreenChange);
+  document.addEventListener('MSFullscreenChange',     onFullscreenChange);
 }})();
 </script>
 </body>

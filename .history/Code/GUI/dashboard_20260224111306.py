@@ -128,7 +128,7 @@ PYTHON_EXE = sys.executable
 #  Plotly iframe renderer  (eliminates Streamlit re-render
 #  flicker and enables proper legend toggle behaviour)
 # ════════════════════════════════════════════════════════════
-_PLOTLY_RENDER_COUNTER: list[int] = [0]  # mutable counter for unique div ids
+_PLOTLY_RENDER_COUNTER: list[int] = [0]   # mutable counter for unique div ids
 
 
 def render_plotly(fig, height: int = 400, key: str = "") -> None:
@@ -159,101 +159,56 @@ def render_plotly(fig, height: int = 400, key: str = "") -> None:
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" charset="utf-8"></script>
 <style>
   * {{ margin:0; padding:0; box-sizing:border-box; }}
-  html, body {{ background:#0f172a; overflow:hidden; width:100%; height:100%; }}
-  #chart-wrap {{ width:100%; height:{height}px; }}
+  html, body {{ background:#0f172a; overflow:hidden; }}
+  #plotly_host {{ width:100%; height:{height}px; }}
 </style>
 </head>
 <body>
-<div id="chart-wrap">
-  <div id="{div_id}" style="width:100%;height:100%;"></div>
-</div>
+<div id="{div_id}" style="width:100%;height:{height}px;"></div>
 <script>
 (function(){{
-  var fig     = {fig_json};
-  var divId   = '{div_id}';
-  var normalH = {height};
-  var normalW = null;   // null = let Plotly be responsive
+  var fig = {fig_json};
 
-  /* ── Pre-relayout helper ─────────────────────────────────
-     Called BEFORE the browser paints the fullscreen frame so
-     there is zero visible intermediate state.               */
-  function relayoutFS(entering) {{
-    if (entering) {{
-      Plotly.relayout(divId, {{
-        width:  screen.width,
-        height: screen.height,
-      }});
-    }} else {{
-      Plotly.relayout(divId, {{
-        width:  normalW,
-        height: normalH,
-      }});
-    }}
-  }}
-
+  // Config: hide logo, keep all default tools plus custom fullscreen
   var config = {{
     displaylogo: false,
-    responsive: false,          // we manage sizing ourselves
+    responsive: true,
     modeBarButtonsToRemove: [],
     modeBarButtonsToAdd: [{{
       name: 'Full screen',
       icon: {{
-        width: 500, height: 500,
+        width: 500,
+        height: 500,
         path: 'M 0 0 L 180 0 L 180 60 L 60 60 L 60 180 L 0 180 Z '
             + 'M 320 0 L 500 0 L 500 180 L 440 180 L 440 60 L 320 60 Z '
             + 'M 0 320 L 60 320 L 60 440 L 180 440 L 180 500 L 0 500 Z '
             + 'M 440 320 L 500 320 L 500 500 L 320 500 L 320 440 L 440 440 Z',
-        ascent: 500, descent: 0,
+        ascent: 500,
+        descent: 0,
       }},
-      click: function() {{
-        var isFS = !!(document.fullscreenElement
-                   || document.webkitFullscreenElement
-                   || document.mozFullScreenElement);
-        var doc = document.documentElement;
-        if (!isFS) {{
-          /* Relayout to full-screen size FIRST, then request fullscreen.
-             The browser will use the already-rendered large figure,
-             so there is no small→large jump.                          */
-          relayoutFS(true);
-          var req = doc.requestFullscreen
-                 || doc.webkitRequestFullscreen
-                 || doc.mozRequestFullScreen
-                 || doc.msRequestFullscreen;
-          if (req) req.call(doc).catch(function(){{}});
+      click: function(gd) {{
+        var el = document.getElementById('{div_id}');
+        if (!document.fullscreenElement) {{
+          el.requestFullscreen().then(function(){{
+            Plotly.relayout(gd, {{height: window.screen.height - 60}});
+          }});
         }} else {{
-          /* Shrink first so the figure never appears large inside the
-             small iframe after exiting fullscreen.                     */
-          relayoutFS(false);
-          var exit = document.exitFullscreen
-                  || document.webkitExitFullscreen
-                  || document.mozCancelFullScreen
-                  || document.msExitFullscreen;
-          if (exit) exit.call(document);
+          document.exitFullscreen().then(function(){{
+            Plotly.relayout(gd, {{height: {height}}});
+          }});
         }}
       }}
     }}],
   }};
 
-  /* Initial render at normal size */
-  Plotly.newPlot(divId, fig.data, fig.layout, config).then(function(){{
-    /* Capture the rendered width so we can restore it precisely */
-    normalW = document.getElementById(divId).offsetWidth || null;
-  }});
+  Plotly.newPlot('{div_id}', fig.data, fig.layout, config);
 
-  /* Safety net: if the user exits fullscreen via Esc key,
-     we still restore the layout correctly.                  */
-  function onFSChange() {{
-    var inFS = !!(document.fullscreenElement
-              || document.webkitFullscreenElement
-              || document.mozFullScreenElement);
-    if (!inFS) {{
-      relayoutFS(false);
+  // Keep iframe height in sync when going fullscreen
+  document.addEventListener('fullscreenchange', function(){{
+    if (!document.fullscreenElement) {{
+      Plotly.relayout('{div_id}', {{height: {height}}});
     }}
-  }}
-  document.addEventListener('fullscreenchange',       onFSChange);
-  document.addEventListener('webkitfullscreenchange', onFSChange);
-  document.addEventListener('mozfullscreenchange',    onFSChange);
-  document.addEventListener('MSFullscreenChange',     onFSChange);
+  }});
 }})();
 </script>
 </body>
@@ -1188,7 +1143,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=380,
                 )
-                render_plotly(radar_fig, height=380, key="report_radar")
+                st.plotly_chart(radar_fig, use_container_width=True)
 
                 f1_vals = [per[c]["f1"] for c in cls_names]
                 colors = [CLASS_COLORS.get(c, "#94a3b8") for c in cls_names]
@@ -1212,7 +1167,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=40, b=10),
                     height=280,
                 )
-                render_plotly(fig_f1, height=280, key="report_f1bar")
+                st.plotly_chart(fig_f1, use_container_width=True)
 
             rows = []
             for cls, m in cm_data["per_class"].items():
@@ -1334,7 +1289,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=50, b=10),
                     height=520,
                 )
-                render_plotly(fig_tsne, height=520, key="tsne_scatter")
+                st.plotly_chart(fig_tsne, use_container_width=True)
 
                 st.markdown("---")
                 st.markdown(
@@ -1363,7 +1318,7 @@ elif page == "📈  Analysis":
                     margin=dict(l=10, r=10, t=20, b=10),
                     height=240,
                 )
-                render_plotly(fig_dist, height=240, key="tsne_dist_bar")
+                st.plotly_chart(fig_dist, use_container_width=True)
             else:
                 st.scatter_chart(
                     df_tsne[["x", "y", "label_name"]], x="x", y="y", color="label_name"
@@ -1642,7 +1597,7 @@ elif page == "🔍  Inference":
                         margin=dict(l=10, r=10, t=20, b=10),
                         height=280,
                     )
-                    render_plotly(fig2, height=280, key=f"infer_prob_{fname}")
+                    st.plotly_chart(fig2, use_container_width=True)
                 except ImportError:
                     st.line_chart(pd.DataFrame(all_probs, columns=CLASS_NAMES))
 
