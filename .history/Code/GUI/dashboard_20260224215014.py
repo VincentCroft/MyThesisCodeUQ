@@ -136,34 +136,31 @@ _SLIDING_PILL_JS = """
   }
 
   // ─── Radio groups ────────────────────────────────────────
-  // Store state on the PARENT window so it survives iframe reloads (Streamlit reruns)
-  var win = window.parent;
-  if (!win._stRadioState) win._stRadioState = {};
+  var radioState = {}; // Store last known positions by index
 
   function setupRadio(rg) {
     var pill = createPill(rg);
 
-    // Identify this radio group by its DOM index to link state
-    // We re-query all radio groups to find our index
-    var allRadios = Array.from(doc.querySelectorAll('[data-testid="stRadio"] > div:last-child'));
-    var idx = allRadios.indexOf(rg);
-
+    // Identify this radio group by its index on the page to persist state
+    var diffs = Array.from(doc.querySelectorAll('[data-testid="stRadio"] > div:last-child'));
+    var idx = diffs.indexOf(rg);
+    
     function upd(anim) {
+      // Find the checked element
       var a = rg.querySelector('[aria-checked="true"]');
       if (a) {
-        movePill(pill, a, rg, anim);
-        
-        // Save new position
-        var tRect = a.getBoundingClientRect();
+        var rect = a.getBoundingClientRect();
         var cRect = rg.getBoundingClientRect();
-        if (idx !== -1) {
-            win._stRadioState[idx] = {
-                left: tRect.left - cRect.left,
-                top: tRect.top - cRect.top,
-                w: tRect.width,
-                h: tRect.height
-            };
-        }
+        
+        // Save state for next mount
+        var targetLeft = (rect.left - cRect.left);
+        var targetTop  = (rect.top  - cRect.top);
+        var targetW    = rect.width;
+        var targetH    = rect.height;
+        
+        radioState[idx] = { left: targetLeft, top: targetTop, w: targetW, h: targetH };
+
+        movePill(pill, a, rg, anim);
       }
     }
 
@@ -183,49 +180,42 @@ _SLIDING_PILL_JS = """
     // Initial setup with polling
     function tryInit(attempts) {
       var a = rg.querySelector('[aria-checked="true"]');
-      if (!a) return; 
-      
-      // If layout not ready, retry
-      if (a.getBoundingClientRect().width === 0 && attempts < 30) {
+      if (!a) return;
+      var rect = a.getBoundingClientRect();
+      if (rect.width === 0 && attempts < 30) {
         setTimeout(function () { tryInit(attempts + 1); }, 40);
         return;
       }
       
-      var rect = a.getBoundingClientRect();
       var cRect = rg.getBoundingClientRect();
-      var targetLeft = rect.left - cRect.left;
-      var targetTop  = rect.top - cRect.top;
+      var targetLeft = (rect.left - cRect.left);
+      var targetTop  = (rect.top  - cRect.top);
       var targetW    = rect.width;
       var targetH    = rect.height;
 
-      // Check if we have previous state for this radio group index
-      var saved = (idx !== -1) ? win._stRadioState[idx] : null;
-
-      if (saved) {
-        // We have a history: Start from OLD position (no transition), then animate to NEW
+      // Check if we have a stored previous state for this radio group
+      if (radioState[idx]) {
+        // Start from previous position
         pill.style.transition = 'none';
-        pill.style.left   = saved.left + 'px';
-        pill.style.top    = saved.top + 'px';
-        pill.style.width  = saved.w + 'px';
-        pill.style.height = saved.h + 'px';
+        pill.style.left   = radioState[idx].left + 'px';
+        pill.style.top    = radioState[idx].top + 'px';
+        pill.style.width  = radioState[idx].w + 'px';
+        pill.style.height = radioState[idx].h + 'px';
         pill.style.opacity = '1';
 
-        // Force reflow
-        void pill.offsetHeight; 
-
-        // Animate to new position
+        // Force reflow, then animate to new position
+        pill.offsetHeight; 
+        
         pill.style.transition = 'left .26s cubic-bezier(.25,.8,.25,1),top .26s cubic-bezier(.25,.8,.25,1),width .26s cubic-bezier(.25,.8,.25,1),height .26s cubic-bezier(.25,.8,.25,1),opacity .18s ease';
         pill.style.left   = targetLeft + 'px';
-        pill.style.top    = targetTop + 'px';
-        pill.style.width  = targetW + 'px';
-        pill.style.height = targetH + 'px';
+        pill.style.top    = targetTop  + 'px';
+        pill.style.width  = targetW    + 'px';
+        pill.style.height = targetH    + 'px';
         
         // Update stored state
-        win._stRadioState[idx] = {
-            left: targetLeft, top: targetTop, w: targetW, h: targetH
-        };
+        radioState[idx] = { left: targetLeft, top: targetTop, w: targetW, h: targetH };
       } else {
-        // First load ever, just snap
+        // First load, no animation
         pill.style.transition = 'none';
         pill.style.left   = targetLeft + 'px';
         pill.style.top    = targetTop  + 'px';
@@ -233,11 +223,7 @@ _SLIDING_PILL_JS = """
         pill.style.height = targetH    + 'px';
         pill.style.opacity = '1';
         
-        if (idx !== -1) {
-            win._stRadioState[idx] = {
-                left: targetLeft, top: targetTop, w: targetW, h: targetH
-            };
-        }
+        radioState[idx] = { left: targetLeft, top: targetTop, w: targetW, h: targetH };
       }
       
       requestAnimationFrame(function () { rg.classList.add('sp-ready'); });
@@ -271,69 +257,24 @@ _SLIDING_PILL_JS = """
     });
   }
 
-  // Store the PREVIOUS page name (not pixels) so after rerender we can
-  // find the "from" element by name and measure fresh coordinates.
-  if (!win._stNavPrev) win._stNavPrev = null;
-
   function setupNav(nav) {
     var pill = createPill(nav);
-
-    function getItem(pageName) {
-      var items = nav.querySelectorAll('.nav-item');
-      for (var i = 0; i < items.length; i++) {
-        if (items[i].getAttribute('data-page') === pageName) return items[i];
-      }
-      return null;
+    function upd(anim) {
+      var a = nav.querySelector('.nav-active');
+      if (a) movePill(pill, a, nav, anim);
     }
 
-    function movePillTo(fromEl, toEl, animate) {
-      var cRect = nav.getBoundingClientRect();
-      if (fromEl && animate) {
-        var fRect = fromEl.getBoundingClientRect();
-        // Snap to "from" without animation
-        pill.style.transition = 'none';
-        pill.style.opacity    = '1';
-        pill.style.left   = (fRect.left - cRect.left) + 'px';
-        pill.style.top    = (fRect.top  - cRect.top)  + 'px';
-        pill.style.width  = fRect.width  + 'px';
-        pill.style.height = fRect.height + 'px';
-        void pill.offsetHeight; // force reflow so the snap is committed
-      }
-      // Animate (or snap) to "to"
-      var tRect = toEl.getBoundingClientRect();
-      if (tRect.width === 0) return; // not laid out yet
-      pill.style.transition = animate
-        ? 'left .28s cubic-bezier(.25,.8,.25,1),top .28s cubic-bezier(.25,.8,.25,1),' +
-          'width .28s cubic-bezier(.25,.8,.25,1),height .28s cubic-bezier(.25,.8,.25,1)'
-        : 'none';
-      pill.style.left   = (tRect.left - cRect.left) + 'px';
-      pill.style.top    = (tRect.top  - cRect.top)  + 'px';
-      pill.style.width  = tRect.width  + 'px';
-      pill.style.height = tRect.height + 'px';
-      pill.style.opacity = '1';
-    }
-
-    // Attach click interceptors
-    nav.querySelectorAll('.nav-item').forEach(function (item) {
-      item.addEventListener('click', function (e) {
+    // Attach click interceptors once
+    nav.querySelectorAll('.nav-item').forEach(function (a) {
+      a.addEventListener('click', function (e) {
         e.preventDefault();
-        var target = item.getAttribute('data-page');
-
-        // Save the current active page name BEFORE toggling the class
-        var curActive = nav.querySelector('.nav-active');
-        win._stNavPrev = curActive ? curActive.getAttribute('data-page') : null;
-
-        // Toggle active class
-        nav.querySelectorAll('.nav-item').forEach(function (it) {
-          it.classList.toggle('nav-active', it.getAttribute('data-page') === target);
+        var target = a.getAttribute('data-page');
+        // Visually update active state immediately
+        nav.querySelectorAll('.nav-item').forEach(function (item) {
+          item.classList.toggle('nav-active', item.getAttribute('data-page') === target);
         });
-
-        // Animate pill to new item immediately (pre-rerender)
-        var fromEl = win._stNavPrev ? getItem(win._stNavPrev) : null;
-        var toEl   = getItem(target);
-        if (toEl) movePillTo(fromEl, toEl, true);
-
-        // Trigger Streamlit rerun via hidden button
+        upd(true);
+        // Click the hidden Streamlit button (triggers rerun, no browser reload)
         var sidebar = doc.querySelector('[data-testid="stSidebar"]');
         if (sidebar) {
           sidebar.querySelectorAll('.stButton button').forEach(function (btn) {
@@ -343,34 +284,20 @@ _SLIDING_PILL_JS = """
       });
     });
 
-    // Init after first mount / after Streamlit rerender
-    function initPill(attempts) {
-      var toEl = nav.querySelector('.nav-active');
-      if (!toEl || toEl.getBoundingClientRect().width === 0) {
-        if (attempts < 30) setTimeout(function () { initPill(attempts + 1); }, 40);
-        return;
-      }
-
-      var prevPage = win._stNavPrev;
-      var fromEl   = prevPage ? getItem(prevPage) : null;
-      // Only do slide animation when "from" and "to" are different elements
-      var doAnim   = fromEl && (fromEl !== toEl) && (fromEl.getBoundingClientRect().width > 0);
-
-      movePillTo(doAnim ? fromEl : null, toEl, doAnim);
-
-      // Store current as "prev" for the next round
-      win._stNavPrev = toEl.getAttribute('data-page');
-
-      hideTriggerBtns();
-      requestAnimationFrame(function () { nav.classList.add('sp-ready'); });
-    }
-
-    hideTriggerBtns();
+    upd(false);
+    hideTriggerBtns(); // immediate first pass
     setTimeout(function () {
-      initPill(0);
-      new MutationObserver(function () { hideTriggerBtns(); })
-        .observe(nav, { childList: true, subtree: true });
-    }, 60);
+      hideTriggerBtns();
+      nav.classList.add('sp-ready');
+      // Re-hide on any DOM change (Streamlit rerenders sidebar on rerun)
+      new MutationObserver(function () {
+        hideTriggerBtns();
+        upd(false);
+      }).observe(nav, {
+        childList: true, subtree: true, attributes: true,
+        attributeFilter: ['class'],
+      });
+    }, 100);
   }
 
   var seen = new WeakSet();

@@ -435,7 +435,8 @@ div[data-testid="stExpanderDetails"] {
     background: rgba(255,255,255,0.06) !important;
 }
 /* Active item — mirrors .stTabs [aria-selected="true"] */
-[data-testid="stRadio"] [data-baseweb="radio"][aria-checked="true"] {
+[data-testid="stRadio"] [data-baseweb="radio"]:has(input:checked),
+[data-testid="stRadio"] [data-baseweb="radio"]:has(input[aria-checked="true"]) {
     background: rgba(30,41,59,0.95) !important;
     border: 1px solid var(--glass-border-top) !important;
     color: var(--text-color) !important;
@@ -487,7 +488,8 @@ div[data-testid="stExpanderDetails"] {
     border-color: transparent !important;
     box-shadow: none !important;
 }
-[data-testid="stRadio"] > div.sp-ready [data-baseweb="radio"][aria-checked="true"] {
+[data-testid="stRadio"] > div.sp-ready [data-baseweb="radio"]:has(input:checked),
+[data-testid="stRadio"] > div.sp-ready [data-baseweb="radio"]:has(input[aria-checked="true"]) {
     background: transparent !important;
     border-color: transparent !important;
     box-shadow: none !important;

@@ -271,69 +271,48 @@ _SLIDING_PILL_JS = """
     });
   }
 
-  // Store the PREVIOUS page name (not pixels) so after rerender we can
-  // find the "from" element by name and measure fresh coordinates.
-  if (!win._stNavPrev) win._stNavPrev = null;
+  // Store nav pill position on parent window so it survives Streamlit reruns
+  if (!win._stNavState) win._stNavState = null;
 
   function setupNav(nav) {
     var pill = createPill(nav);
 
-    function getItem(pageName) {
-      var items = nav.querySelectorAll('.nav-item');
-      for (var i = 0; i < items.length; i++) {
-        if (items[i].getAttribute('data-page') === pageName) return items[i];
-      }
-      return null;
-    }
-
-    function movePillTo(fromEl, toEl, animate) {
+    function upd(anim) {
+      var a = nav.querySelector('.nav-active');
+      if (!a) return;
+      // Save position before moving
+      var tRect = a.getBoundingClientRect();
       var cRect = nav.getBoundingClientRect();
-      if (fromEl && animate) {
-        var fRect = fromEl.getBoundingClientRect();
-        // Snap to "from" without animation
-        pill.style.transition = 'none';
-        pill.style.opacity    = '1';
-        pill.style.left   = (fRect.left - cRect.left) + 'px';
-        pill.style.top    = (fRect.top  - cRect.top)  + 'px';
-        pill.style.width  = fRect.width  + 'px';
-        pill.style.height = fRect.height + 'px';
-        void pill.offsetHeight; // force reflow so the snap is committed
-      }
-      // Animate (or snap) to "to"
-      var tRect = toEl.getBoundingClientRect();
-      if (tRect.width === 0) return; // not laid out yet
-      pill.style.transition = animate
-        ? 'left .28s cubic-bezier(.25,.8,.25,1),top .28s cubic-bezier(.25,.8,.25,1),' +
-          'width .28s cubic-bezier(.25,.8,.25,1),height .28s cubic-bezier(.25,.8,.25,1)'
-        : 'none';
-      pill.style.left   = (tRect.left - cRect.left) + 'px';
-      pill.style.top    = (tRect.top  - cRect.top)  + 'px';
-      pill.style.width  = tRect.width  + 'px';
-      pill.style.height = tRect.height + 'px';
-      pill.style.opacity = '1';
+      win._stNavState = {
+        left: tRect.left - cRect.left,
+        top:  tRect.top  - cRect.top,
+        w:    tRect.width,
+        h:    tRect.height
+      };
+      movePill(pill, a, nav, anim);
     }
 
     // Attach click interceptors
-    nav.querySelectorAll('.nav-item').forEach(function (item) {
-      item.addEventListener('click', function (e) {
+    nav.querySelectorAll('.nav-item').forEach(function (a) {
+      a.addEventListener('click', function (e) {
         e.preventDefault();
-        var target = item.getAttribute('data-page');
-
-        // Save the current active page name BEFORE toggling the class
-        var curActive = nav.querySelector('.nav-active');
-        win._stNavPrev = curActive ? curActive.getAttribute('data-page') : null;
-
-        // Toggle active class
-        nav.querySelectorAll('.nav-item').forEach(function (it) {
-          it.classList.toggle('nav-active', it.getAttribute('data-page') === target);
+        var target = a.getAttribute('data-page');
+        // Visually update active state immediately
+        nav.querySelectorAll('.nav-item').forEach(function (item) {
+          item.classList.toggle('nav-active', item.getAttribute('data-page') === target);
         });
-
-        // Animate pill to new item immediately (pre-rerender)
-        var fromEl = win._stNavPrev ? getItem(win._stNavPrev) : null;
-        var toEl   = getItem(target);
-        if (toEl) movePillTo(fromEl, toEl, true);
-
-        // Trigger Streamlit rerun via hidden button
+        upd(true);
+        // Save destination as "from" position for the next rerender
+        var dest = nav.querySelector('.nav-active');
+        if (dest) {
+          var tR = dest.getBoundingClientRect();
+          var cR = nav.getBoundingClientRect();
+          win._stNavState = {
+            left: tR.left - cR.left, top: tR.top - cR.top,
+            w: tR.width, h: tR.height
+          };
+        }
+        // Click the hidden Streamlit button (triggers rerun, no browser reload)
         var sidebar = doc.querySelector('[data-testid="stSidebar"]');
         if (sidebar) {
           sidebar.querySelectorAll('.stButton button').forEach(function (btn) {
@@ -343,23 +322,46 @@ _SLIDING_PILL_JS = """
       });
     });
 
-    // Init after first mount / after Streamlit rerender
-    function initPill(attempts) {
-      var toEl = nav.querySelector('.nav-active');
-      if (!toEl || toEl.getBoundingClientRect().width === 0) {
-        if (attempts < 30) setTimeout(function () { initPill(attempts + 1); }, 40);
+    // On first setup / after Streamlit rerender: animate pill from last known position
+    function initPill() {
+      var a = nav.querySelector('.nav-active');
+      if (!a || a.getBoundingClientRect().width === 0) {
+        setTimeout(initPill, 40);
         return;
       }
+      var tRect = a.getBoundingClientRect();
+      var cRect = nav.getBoundingClientRect();
+      var targetLeft = tRect.left - cRect.left;
+      var targetTop  = tRect.top  - cRect.top;
+      var targetW    = tRect.width;
+      var targetH    = tRect.height;
 
-      var prevPage = win._stNavPrev;
-      var fromEl   = prevPage ? getItem(prevPage) : null;
-      // Only do slide animation when "from" and "to" are different elements
-      var doAnim   = fromEl && (fromEl !== toEl) && (fromEl.getBoundingClientRect().width > 0);
-
-      movePillTo(doAnim ? fromEl : null, toEl, doAnim);
-
-      // Store current as "prev" for the next round
-      win._stNavPrev = toEl.getAttribute('data-page');
+      if (win._stNavState) {
+        // Start pill at the previously saved position (visually continuous from last click)
+        pill.style.transition = 'none';
+        pill.style.left   = win._stNavState.left + 'px';
+        pill.style.top    = win._stNavState.top  + 'px';
+        pill.style.width  = win._stNavState.w    + 'px';
+        pill.style.height = win._stNavState.h    + 'px';
+        pill.style.opacity = '1';
+        void pill.offsetHeight; // force reflow
+        // Animate slide to the actual active item
+        pill.style.transition = 'left .28s cubic-bezier(.25,.8,.25,1),top .28s cubic-bezier(.25,.8,.25,1),width .28s cubic-bezier(.25,.8,.25,1),height .28s cubic-bezier(.25,.8,.25,1),opacity .18s ease';
+        pill.style.left   = targetLeft + 'px';
+        pill.style.top    = targetTop  + 'px';
+        pill.style.width  = targetW    + 'px';
+        pill.style.height = targetH    + 'px';
+      } else {
+        // Very first load — just snap
+        pill.style.transition = 'none';
+        pill.style.left   = targetLeft + 'px';
+        pill.style.top    = targetTop  + 'px';
+        pill.style.width  = targetW    + 'px';
+        pill.style.height = targetH    + 'px';
+        pill.style.opacity = '1';
+      }
+      // Update stored state
+      win._stNavState = { left: targetLeft, top: targetTop, w: targetW, h: targetH };
 
       hideTriggerBtns();
       requestAnimationFrame(function () { nav.classList.add('sp-ready'); });
@@ -367,9 +369,21 @@ _SLIDING_PILL_JS = """
 
     hideTriggerBtns();
     setTimeout(function () {
-      initPill(0);
-      new MutationObserver(function () { hideTriggerBtns(); })
-        .observe(nav, { childList: true, subtree: true });
+      initPill();
+      // Re-hide on any DOM change (Streamlit rerenders sidebar on rerun)
+      new MutationObserver(function (mutations) {
+        hideTriggerBtns();
+        // Only re-position if the active class actually changed (not trigger‑btn hiding)
+        for (var i = 0; i < mutations.length; i++) {
+          var m = mutations[i];
+          if (m.type === 'attributes' && m.attributeName === 'class') {
+            upd(false); break;
+          }
+        }
+      }).observe(nav, {
+        childList: true, subtree: true, attributes: true,
+        attributeFilter: ['class'],
+      });
     }, 60);
   }
 

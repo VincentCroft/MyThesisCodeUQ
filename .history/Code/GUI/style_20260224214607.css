@@ -421,7 +421,7 @@ div[data-testid="stExpanderDetails"] {
     border: 1px solid transparent !important;
     position: relative !important;
     z-index: 1 !important;
-    padding: 0.5rem 1.1rem !important;
+    padding: 0.72rem 1.4rem !important;
     cursor: pointer !important;
     transition:
         color 0.22s ease,

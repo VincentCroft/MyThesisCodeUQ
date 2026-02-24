@@ -271,69 +271,44 @@ _SLIDING_PILL_JS = """
     });
   }
 
-  // Store the PREVIOUS page name (not pixels) so after rerender we can
-  // find the "from" element by name and measure fresh coordinates.
-  if (!win._stNavPrev) win._stNavPrev = null;
-
   function setupNav(nav) {
     var pill = createPill(nav);
 
-    function getItem(pageName) {
-      var items = nav.querySelectorAll('.nav-item');
-      for (var i = 0; i < items.length; i++) {
-        if (items[i].getAttribute('data-page') === pageName) return items[i];
+    // Persist state for smooth transitions across reruns
+    if (!win._stNavState) win._stNavState = null;
+
+    function upd(anim) {
+      var a = nav.querySelector('.nav-active');
+      if (a) {
+        movePill(pill, a, nav, anim);
+        // Save state
+        var tRect = a.getBoundingClientRect();
+        var cRect = nav.getBoundingClientRect();
+        win._stNavState = {
+            left: tRect.left - cRect.left,
+            top: tRect.top - cRect.top,
+            w: tRect.width,
+            h: tRect.height
+        };
       }
-      return null;
     }
 
-    function movePillTo(fromEl, toEl, animate) {
-      var cRect = nav.getBoundingClientRect();
-      if (fromEl && animate) {
-        var fRect = fromEl.getBoundingClientRect();
-        // Snap to "from" without animation
-        pill.style.transition = 'none';
-        pill.style.opacity    = '1';
-        pill.style.left   = (fRect.left - cRect.left) + 'px';
-        pill.style.top    = (fRect.top  - cRect.top)  + 'px';
-        pill.style.width  = fRect.width  + 'px';
-        pill.style.height = fRect.height + 'px';
-        void pill.offsetHeight; // force reflow so the snap is committed
-      }
-      // Animate (or snap) to "to"
-      var tRect = toEl.getBoundingClientRect();
-      if (tRect.width === 0) return; // not laid out yet
-      pill.style.transition = animate
-        ? 'left .28s cubic-bezier(.25,.8,.25,1),top .28s cubic-bezier(.25,.8,.25,1),' +
-          'width .28s cubic-bezier(.25,.8,.25,1),height .28s cubic-bezier(.25,.8,.25,1)'
-        : 'none';
-      pill.style.left   = (tRect.left - cRect.left) + 'px';
-      pill.style.top    = (tRect.top  - cRect.top)  + 'px';
-      pill.style.width  = tRect.width  + 'px';
-      pill.style.height = tRect.height + 'px';
-      pill.style.opacity = '1';
-    }
-
-    // Attach click interceptors
-    nav.querySelectorAll('.nav-item').forEach(function (item) {
-      item.addEventListener('click', function (e) {
+    // Attach click interceptors once
+    nav.querySelectorAll('.nav-item').forEach(function (a) {
+      a.addEventListener('click', function (e) {
         e.preventDefault();
-        var target = item.getAttribute('data-page');
-
-        // Save the current active page name BEFORE toggling the class
-        var curActive = nav.querySelector('.nav-active');
-        win._stNavPrev = curActive ? curActive.getAttribute('data-page') : null;
-
-        // Toggle active class
-        nav.querySelectorAll('.nav-item').forEach(function (it) {
-          it.classList.toggle('nav-active', it.getAttribute('data-page') === target);
+        var target = a.getAttribute('data-page');
+        
+        // Save CURRENT pill position before moving, effectively start of animation
+        // Actually, movePill handles the transition from current style.
+        
+        // Visually update active state immediately
+        nav.querySelectorAll('.nav-item').forEach(function (item) {
+          item.classList.toggle('nav-active', item.getAttribute('data-page') === target);
         });
-
-        // Animate pill to new item immediately (pre-rerender)
-        var fromEl = win._stNavPrev ? getItem(win._stNavPrev) : null;
-        var toEl   = getItem(target);
-        if (toEl) movePillTo(fromEl, toEl, true);
-
-        // Trigger Streamlit rerun via hidden button
+        upd(true);
+        
+        // Click the hidden Streamlit button (triggers rerun, no browser reload)
         var sidebar = doc.querySelector('[data-testid="stSidebar"]');
         if (sidebar) {
           sidebar.querySelectorAll('.stButton button').forEach(function (btn) {
@@ -343,34 +318,67 @@ _SLIDING_PILL_JS = """
       });
     });
 
-    // Init after first mount / after Streamlit rerender
-    function initPill(attempts) {
-      var toEl = nav.querySelector('.nav-active');
-      if (!toEl || toEl.getBoundingClientRect().width === 0) {
-        if (attempts < 30) setTimeout(function () { initPill(attempts + 1); }, 40);
-        return;
-      }
+    // Initial load with animation from previous state
+    function init() {
+       var a = nav.querySelector('.nav-active');
+       if (!a) return;
 
-      var prevPage = win._stNavPrev;
-      var fromEl   = prevPage ? getItem(prevPage) : null;
-      // Only do slide animation when "from" and "to" are different elements
-      var doAnim   = fromEl && (fromEl !== toEl) && (fromEl.getBoundingClientRect().width > 0);
+       var rect  = a.getBoundingClientRect();
+       var cRect = nav.getBoundingClientRect();
+       
+       var targetLeft = rect.left - cRect.left;
+       var targetTop  = rect.top - cRect.top;
+       var targetW    = rect.width;
+       var targetH    = rect.height;
 
-      movePillTo(doAnim ? fromEl : null, toEl, doAnim);
+       if (win._stNavState) {
+           // Start at old position
+           pill.style.transition = 'none';
+           pill.style.left   = win._stNavState.left + 'px';
+           pill.style.top    = win._stNavState.top + 'px';
+           pill.style.width  = win._stNavState.w + 'px';
+           pill.style.height = win._stNavState.h + 'px';
+           pill.style.opacity = '1';
+           
+           // Reflow
+           void pill.offsetHeight;
 
-      // Store current as "prev" for the next round
-      win._stNavPrev = toEl.getAttribute('data-page');
-
-      hideTriggerBtns();
-      requestAnimationFrame(function () { nav.classList.add('sp-ready'); });
+           // Animate to new
+           pill.style.transition = 'left .26s cubic-bezier(.25,.8,.25,1),top .26s cubic-bezier(.25,.8,.25,1),width .26s cubic-bezier(.25,.8,.25,1),height .26s cubic-bezier(.25,.8,.25,1),opacity .18s ease';
+           pill.style.left   = targetLeft + 'px';
+           pill.style.top    = targetTop + 'px';
+           pill.style.width  = targetW + 'px';
+           pill.style.height = targetH + 'px';
+       } else {
+           // First time
+           pill.style.transition = 'none';
+           pill.style.left   = targetLeft + 'px';
+           pill.style.top    = targetTop + 'px';
+           pill.style.width  = targetW + 'px';
+           pill.style.height = targetH + 'px';
+           pill.style.opacity = '1';
+       }
+       // Update state
+       win._stNavState = { left: targetLeft, top: targetTop, w: targetW, h: targetH };
     }
+    
+    // Slight delay to ensure layout stability on load
+    setTimeout(init, 50);
 
-    hideTriggerBtns();
+    hideTriggerBtns(); // immediate first pass
     setTimeout(function () {
-      initPill(0);
-      new MutationObserver(function () { hideTriggerBtns(); })
-        .observe(nav, { childList: true, subtree: true });
-    }, 60);
+      hideTriggerBtns();
+      nav.classList.add('sp-ready');
+      // Re-hide on any DOM change (Streamlit rerenders sidebar on rerun)
+      new MutationObserver(function () {
+        hideTriggerBtns();
+        // Don't call upd(false) here, or it snaps back without animation if we are relying on CSS transitions
+        // upd(false); 
+      }).observe(nav, {
+        childList: true, subtree: true, attributes: true,
+        attributeFilter: ['class'],
+      });
+    }, 100);
   }
 
   var seen = new WeakSet();
