@@ -130,6 +130,10 @@ PYTHON_EXE = sys.executable
 # ════════════════════════════════════════════════════════════
 _PLOTLY_RENDER_COUNTER: list[int] = [0]  # mutable counter for unique div ids
 
+# Module-level dict — survives Streamlit reruns (module stays loaded).
+# Holds the live training thread and its shared state.
+_ACTIVE_PROCS: dict = {}
+
 
 def _render_log(placeholder, lines: list[str], box_h: int = 380) -> None:
     """Render log lines in a hidden-scrollbar box that auto-scrolls to bottom."""
@@ -807,7 +811,22 @@ elif page == "🚀  Train":
         )
         start_btn = False  # cancel the start
 
-    # ── Launch training ───────────────────────────────────
+    # ── Stop button: write flag file so train.py exits at epoch boundary ─
+    if stop_btn and st.session_state.get("training_running", False):
+        ctx = st.session_state.get("train_ctx", {})
+        _sfp = Path(ctx["stop_flag"]) if ctx.get("stop_flag") else None
+        if _sfp:
+            _sfp.parent.mkdir(parents=True, exist_ok=True)
+            _sfp.touch()
+        st.session_state["stop_requested"] = True
+        # Append to the live log list so the message shows immediately
+        if _ACTIVE_PROCS.get("log_lines") is not None:
+            _ACTIVE_PROCS["log_lines"].append(
+                "\n  ⏹  Stop signal sent — finishing current epoch then saving…"
+            )
+        st.warning("⏹  Stop signal sent — finishing current epoch then saving…")
+
+    # ── Launch training (non-blocking) ───────────────────
     if start_btn:
         st.session_state["training_running"] = True
         st.session_state["stop_requested"] = False
@@ -821,17 +840,25 @@ elif page == "🚀  Train":
             run_name_final,
         ]
 
-        # Flag file path — same logic as train.py's STOP_FLAG
-        _run_paths = get_run_paths(run_name_final)
-        stop_flag_path = _run_paths["ckpt_dir"] / "STOP"
-        # Clean up any stale flag from a previous run
+        _run_paths_start = get_run_paths(run_name_final)
+        stop_flag_path = _run_paths_start["ckpt_dir"] / "STOP"
         if stop_flag_path.exists():
             stop_flag_path.unlink()
 
-        log_lines: list[str] = []
-        proc_holder: list = [None]  # mutable container so thread can write proc ref
+        # Store shared state in module-level dict (survives st.rerun())
+        _ACTIVE_PROCS["log_lines"] = []
+        _ACTIVE_PROCS["stop_flag"] = stop_flag_path
+        _ACTIVE_PROCS["max_epoch"] = int(epochs)
+        _ACTIVE_PROCS["epoch_seen"] = 0
+        _ACTIVE_PROCS["done"] = False
 
-        def stream_process():
+        st.session_state["train_ctx"] = {
+            "run_name": run_name_final,
+            "stop_flag": str(stop_flag_path),
+            "max_epoch": int(epochs),
+        }
+
+        def _stream():
             import subprocess as _sp
 
             proc = _sp.Popen(
@@ -842,80 +869,71 @@ elif page == "🚀  Train":
                 bufsize=1,
                 cwd=str(CODE_DIR),
             )
-            proc_holder[0] = proc
             for line in proc.stdout:
-                log_lines.append(line.rstrip())
+                _ACTIVE_PROCS["log_lines"].append(line.rstrip())
             proc.wait()
-            log_lines.append(f"\n  Process exited with code {proc.returncode}")
+            _ACTIVE_PROCS["log_lines"].append(
+                f"\n  Process exited with code {proc.returncode}"
+            )
+            _ACTIVE_PROCS["done"] = True
             st.session_state["training_running"] = False
 
-        thread = threading.Thread(target=stream_process, daemon=True)
-        thread.start()
+        _t = threading.Thread(target=_stream, daemon=True)
+        _ACTIVE_PROCS["thread"] = _t
+        _t.start()
+        st.rerun()  # immediately rerun to enter monitoring mode below
 
-        progress_bar = progress_placeholder.progress(0, text="Training in progress…")
-        epoch_seen = 0
-        max_epoch = int(epochs)
+    # ── Live monitoring — runs on every rerun while training is active ───
+    if st.session_state.get("training_running", False) and _ACTIVE_PROCS.get("thread"):
+        ctx = st.session_state.get("train_ctx", {})
+        log_lines = _ACTIVE_PROCS.get("log_lines", [])
+        max_ep = _ACTIVE_PROCS.get("max_epoch", 1)
+        ep_seen = _ACTIVE_PROCS.get("epoch_seen", 0)
 
-        while thread.is_alive():
-            time.sleep(0.5)
+        # Parse latest epoch progress from log
+        for line in log_lines:
+            try:
+                parts = line.strip().split()
+                if len(parts) >= 5 and parts[0].isdigit():
+                    ep = int(parts[0])
+                    if ep > ep_seen:
+                        ep_seen = ep
+                        _ACTIVE_PROCS["epoch_seen"] = ep_seen
+            except Exception:
+                pass
 
-            # Check stop button via rerun signal
-            if stop_btn or st.session_state.get("stop_requested", False):
-                if not stop_flag_path.exists():
-                    stop_flag_path.parent.mkdir(parents=True, exist_ok=True)
-                    stop_flag_path.touch()
-                    log_lines.append(
-                        "\n  ⏹  Stop signal sent — finishing current epoch then saving…"
-                    )
-                    st.session_state["stop_requested"] = True
-
-            _render_log(log_placeholder, log_lines)
-            for line in log_lines:
-                try:
-                    parts = line.strip().split()
-                    if len(parts) >= 5 and parts[0].isdigit():
-                        ep = int(parts[0])
-                        if ep > epoch_seen:
-                            epoch_seen = ep
-                            progress_bar.progress(
-                                min(epoch_seen / max_epoch, 1.0),
-                                text=f"Epoch {epoch_seen} / {max_epoch}",
-                            )
-                except Exception:
-                    pass
-
-        thread.join()
-        # Clean up stop flag if still present
-        if stop_flag_path.exists():
-            stop_flag_path.unlink()
-        progress_bar.progress(1.0, text="✅  Done!")
+        progress_placeholder.progress(
+            min(ep_seen / max_ep, 1.0) if max_ep else 0,
+            text=f"Epoch {ep_seen} / {max_ep}",
+        )
         _render_log(log_placeholder, log_lines)
-        st.session_state["training_running"] = False
 
-        _finished_rp = get_run_paths(run_name_final)
-        hist_fin = load_history(_finished_rp)
-        if hist_fin:
-            best_val = max(hist_fin["val_acc"])
-            m1, m2, m3 = metric_placeholder.columns(3)
-            m1.metric("Best Val Accuracy", f"{best_val:.2%}")
-            m2.metric("Total Epochs", f"{len(hist_fin['val_acc'])}")
-            m3.metric("Final Val Loss", f"{hist_fin['val_loss'][-1]:.4f}")
-            st.balloons()
+        _train_thread = _ACTIVE_PROCS["thread"]
+        if _train_thread.is_alive():
+            time.sleep(0.5)
+            st.rerun()  # ← periodic rerun keeps Stop button clickable
+        else:
+            # Training finished
+            _sfp_clean = _ACTIVE_PROCS.get("stop_flag")
+            if _sfp_clean and Path(str(_sfp_clean)).exists():
+                Path(str(_sfp_clean)).unlink(missing_ok=True)
+            progress_placeholder.progress(1.0, text="✅  Done!")
+            _render_log(log_placeholder, log_lines)
+            st.session_state["training_running"] = False
 
-        st.info(
-            f"✅  Run **{run_name_final}** saved. Select it from the sidebar to analyse."
-        )
-
-    # ── Stop button outside the start block ──────────────
-    if stop_btn and st.session_state.get("training_running", False):
-        st.session_state["stop_requested"] = True
-        _run_paths_stop = get_run_paths(run_name_final)
-        _sfp = _run_paths_stop["ckpt_dir"] / "STOP"
-        _sfp.parent.mkdir(parents=True, exist_ok=True)
-        _sfp.touch()
-        st.warning(
-            "⏹  Stop signal sent — training will finish the current epoch then save."
-        )
+            _finished_rp = get_run_paths(ctx.get("run_name", run_name_final))
+            hist_fin = load_history(_finished_rp)
+            if hist_fin:
+                best_val = max(hist_fin["val_acc"])
+                m1, m2, m3 = metric_placeholder.columns(3)
+                m1.metric("Best Val Accuracy", f"{best_val:.2%}")
+                m2.metric("Total Epochs", f"{len(hist_fin['val_acc'])}")
+                m3.metric("Final Val Loss", f"{hist_fin['val_loss'][-1]:.4f}")
+                st.balloons()
+            st.info(
+                f"✅  Run **{ctx.get('run_name', run_name_final)}** saved. "
+                "Select it from the sidebar to analyse."
+            )
 
 
 # ════════════════════════════════════════════════════════════

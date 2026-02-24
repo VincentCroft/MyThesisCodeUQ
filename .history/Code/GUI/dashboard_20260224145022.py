@@ -131,31 +131,6 @@ PYTHON_EXE = sys.executable
 _PLOTLY_RENDER_COUNTER: list[int] = [0]  # mutable counter for unique div ids
 
 
-def _render_log(placeholder, lines: list[str], box_h: int = 380) -> None:
-    """Render log lines in a hidden-scrollbar box that auto-scrolls to bottom."""
-    import html as _html_mod
-
-    content = _html_mod.escape("\n".join(lines[-200:]))
-    html_str = f"""\
-<!DOCTYPE html><html><head><meta charset="utf-8">
-<style>
-*{{margin:0;padding:0;box-sizing:border-box;}}
-body{{background:#0f172a;}}
-#lb{{
-  background:#0f172a;border:1px solid #334155;border-radius:8px;
-  padding:12px;font-family:monospace;font-size:0.78rem;color:#94a3b8;
-  height:{box_h}px;overflow-y:scroll;white-space:pre-wrap;
-  scrollbar-width:none;-ms-overflow-style:none;
-}}
-#lb::-webkit-scrollbar{{display:none;}}
-</style></head><body>
-<div id="lb">{content}</div>
-<script>var e=document.getElementById('lb');e.scrollTop=e.scrollHeight;</script>
-</body></html>"""
-    with placeholder:
-        _components.html(html_str, height=box_h + 4, scrolling=False)
-
-
 def render_plotly(fig, height: int = 400, key: str = "") -> None:
     """Render a Plotly figure inside a stable <iframe> via components.html().
 
@@ -821,13 +796,6 @@ elif page == "🚀  Train":
             run_name_final,
         ]
 
-        # Flag file path — same logic as train.py's STOP_FLAG
-        _run_paths = get_run_paths(run_name_final)
-        stop_flag_path = _run_paths["ckpt_dir"] / "STOP"
-        # Clean up any stale flag from a previous run
-        if stop_flag_path.exists():
-            stop_flag_path.unlink()
-
         log_lines: list[str] = []
         proc_holder: list = [None]  # mutable container so thread can write proc ref
 
@@ -855,21 +823,41 @@ elif page == "🚀  Train":
         progress_bar = progress_placeholder.progress(0, text="Training in progress…")
         epoch_seen = 0
         max_epoch = int(epochs)
+        _run_ckpt_dir = get_run_paths(run_name_final)["ckpt_dir"]
+        _stop_flag_written = False
+
+        def _render_log(lines: list[str], height: int = 380) -> None:
+            """Render log lines in an auto-scrolling iframe."""
+            import html as _html
+            text = "\n".join(lines[-80:])
+            escaped = _html.escape(text)
+            with log_placeholder:
+                _components.html(
+                    f'<!DOCTYPE html><html><body style="margin:0;background:#0f172a;">'
+                    f'<pre id="log" style="margin:0;padding:12px;font-family:monospace;'
+                    f'font-size:0.78rem;color:#94a3b8;white-space:pre-wrap;'
+                    f'word-break:break-all;max-height:{height - 20}px;overflow-y:auto;'
+                    f'box-sizing:border-box;">{escaped}</pre>'
+                    f'<script>var e=document.getElementById("log");e.scrollTop=e.scrollHeight;</script>'
+                    f'</body></html>',
+                    height=height,
+                    scrolling=False,
+                )
 
         while thread.is_alive():
             time.sleep(0.5)
 
-            # Check stop button via rerun signal
-            if stop_btn or st.session_state.get("stop_requested", False):
-                if not stop_flag_path.exists():
-                    stop_flag_path.parent.mkdir(parents=True, exist_ok=True)
-                    stop_flag_path.touch()
-                    log_lines.append(
-                        "\n  ⏹  Stop signal sent — finishing current epoch then saving…"
-                    )
-                    st.session_state["stop_requested"] = True
+            # Graceful stop: write flag file so train.py finishes current epoch first
+            if stop_btn and not st.session_state.get("stop_requested", False):
+                st.session_state["stop_requested"] = True
+            if st.session_state.get("stop_requested", False) and not _stop_flag_written:
+                _run_ckpt_dir.mkdir(parents=True, exist_ok=True)
+                (_run_ckpt_dir / ".stop_requested").touch()
+                _stop_flag_written = True
+                log_lines.append("  ⏹  Stop requested — will finish current epoch then stop…")
 
-            _render_log(log_placeholder, log_lines)
+            _render_log(log_lines)
+
             for line in log_lines:
                 try:
                     parts = line.strip().split()
@@ -885,11 +873,12 @@ elif page == "🚀  Train":
                     pass
 
         thread.join()
-        # Clean up stop flag if still present
-        if stop_flag_path.exists():
-            stop_flag_path.unlink()
+        # Clean up flag file if process exited before reading it
+        _sf = _run_ckpt_dir / ".stop_requested"
+        if _sf.exists():
+            _sf.unlink(missing_ok=True)
         progress_bar.progress(1.0, text="✅  Done!")
-        _render_log(log_placeholder, log_lines)
+        _render_log(log_lines)
         st.session_state["training_running"] = False
 
         _finished_rp = get_run_paths(run_name_final)
@@ -909,12 +898,8 @@ elif page == "🚀  Train":
     # ── Stop button outside the start block ──────────────
     if stop_btn and st.session_state.get("training_running", False):
         st.session_state["stop_requested"] = True
-        _run_paths_stop = get_run_paths(run_name_final)
-        _sfp = _run_paths_stop["ckpt_dir"] / "STOP"
-        _sfp.parent.mkdir(parents=True, exist_ok=True)
-        _sfp.touch()
         st.warning(
-            "⏹  Stop signal sent — training will finish the current epoch then save."
+            "⏹  Stop signal sent — training will terminate after the current epoch."
         )
 
 

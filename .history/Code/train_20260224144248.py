@@ -298,10 +298,11 @@ def main():
     patience_limit = cfg["training"]["early_stopping_patience"]
     history = {"train_loss": [], "train_acc": [], "val_loss": [], "val_acc": []}
 
-    # Stop-flag: GUI writes this file to request a clean stop at epoch boundary
-    STOP_FLAG = RUN_CKPT_DIR / "STOP"
-    if STOP_FLAG.exists():
-        STOP_FLAG.unlink()
+    # Graceful-stop flag: dashboard writes this file when the user clicks
+    # "Stop Training".  We check it at the END of each epoch so the current
+    # epoch always finishes cleanly before we exit.
+    stop_flag = RUN_CKPT_DIR / ".stop_requested"
+    stop_flag.unlink(missing_ok=True)  # clear any leftover from a previous run
 
     print(
         f"{'Epoch':>6}  {'Trn Loss':>9}  {'Trn Acc':>8}  {'Val Loss':>9}  {'Val Acc':>8}  {'LR':>10}"
@@ -351,10 +352,13 @@ def main():
             print(f"\n  ⏹  Early stopping at epoch {epoch}.")
             break
 
-        # Clean stop requested by GUI — finish this epoch then exit
-        if STOP_FLAG.exists():
-            STOP_FLAG.unlink()
-            print(f"\n  ⏹  Stop requested — finishing after epoch {epoch}.")
+        # ── Graceful stop: check flag written by the GUI ───────────────
+        if stop_flag.exists():
+            try:
+                stop_flag.unlink()
+            except Exception:
+                pass
+            print(f"\n  ⏹  Stop requested — training stopped after epoch {epoch}.")
             break
 
     # ── 6. Final evaluation ──

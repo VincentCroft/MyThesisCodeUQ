@@ -130,6 +130,10 @@ PYTHON_EXE = sys.executable
 # ════════════════════════════════════════════════════════════
 _PLOTLY_RENDER_COUNTER: list[int] = [0]  # mutable counter for unique div ids
 
+# Module-level dict — survives Streamlit reruns (module stays loaded).
+# Holds the live training thread and its shared state.
+_ACTIVE_PROCS: dict = {}
+
 
 def _render_log(placeholder, lines: list[str], box_h: int = 380) -> None:
     """Render log lines in a hidden-scrollbar box that auto-scrolls to bottom."""

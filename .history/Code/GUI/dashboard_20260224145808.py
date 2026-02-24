@@ -134,7 +134,6 @@ _PLOTLY_RENDER_COUNTER: list[int] = [0]  # mutable counter for unique div ids
 def _render_log(placeholder, lines: list[str], box_h: int = 380) -> None:
     """Render log lines in a hidden-scrollbar box that auto-scrolls to bottom."""
     import html as _html_mod
-
     content = _html_mod.escape("\n".join(lines[-200:]))
     html_str = f"""\
 <!DOCTYPE html><html><head><meta charset="utf-8">
@@ -864,9 +863,7 @@ elif page == "🚀  Train":
                 if not stop_flag_path.exists():
                     stop_flag_path.parent.mkdir(parents=True, exist_ok=True)
                     stop_flag_path.touch()
-                    log_lines.append(
-                        "\n  ⏹  Stop signal sent — finishing current epoch then saving…"
-                    )
+                    log_lines.append("\n  ⏹  Stop signal sent — finishing current epoch then saving…")
                     st.session_state["stop_requested"] = True
 
             _render_log(log_placeholder, log_lines)
