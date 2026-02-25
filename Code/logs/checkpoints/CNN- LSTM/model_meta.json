@@ -1,0 +1,5 @@
+{
+  "input_size": 14,
+  "num_classes": 4,
+  "model_type": "LSTM"
+}

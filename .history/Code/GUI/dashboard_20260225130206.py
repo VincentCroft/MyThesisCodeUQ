@@ -1004,7 +1004,9 @@ elif page == "Train":
             _MODEL_OPTIONS = ["TCN", "LSTM", "Transformer", "CNN_LSTM"]
             _cfg_type = cfg["model"]["type"]
             _default_idx = (
-                _MODEL_OPTIONS.index(_cfg_type) if _cfg_type in _MODEL_OPTIONS else 0
+                _MODEL_OPTIONS.index(_cfg_type)
+                if _cfg_type in _MODEL_OPTIONS
+                else 0
             )
             model_type = st.selectbox(
                 "Model Type",

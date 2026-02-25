@@ -34,15 +34,6 @@ inference:
   model_path: ../Code/logs/checkpoints/best_model.pt
   top_k: 4
 model:
-  cnn_lstm:
-    cnn_channels:
-    - 64
-    - 128
-    - 128
-    dropout: 0.2
-    kernel_size: 3
-    lstm_hidden: 128
-    lstm_layers: 2
   input_size: 26
   lstm:
     dropout: 0.2
@@ -63,12 +54,21 @@ model:
     dropout: 0.1
     nhead: 4
     num_encoder_layers: 3
-  type: CNN_LSTM
+  cnn_lstm:
+    cnn_channels:
+    - 64
+    - 128
+    - 128
+    kernel_size: 3
+    lstm_hidden: 128
+    lstm_layers: 2
+    dropout: 0.2
+  type: TCN
 training:
   batch_size: 128
   checkpoint_dir: ../Code/logs/checkpoints
   early_stopping_patience: 10
-  epochs: 10
+  epochs: 5
   learning_rate: 0.001
   log_dir: ../Code/logs
   scheduler: cosine
