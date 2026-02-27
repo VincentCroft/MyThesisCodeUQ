@@ -95,25 +95,29 @@ def export_onnx(
     Dynamic axes are set for batch and time so the exported model accepts any
     sequence length at inference time — useful for streaming on Raspberry Pi / Jetson.
 
-    Returns True on success, False if torch.onnx is unavailable or export fails.
-    """
-    try:
-        import torch.onnx  # always present in PyTorch >= 1.x
+    NOTE: torch.onnx.export requires CPU — this function always moves the model
+    to CPU temporarily, then restores it to the original device afterwards.
 
-        model.eval()
-        dummy = torch.zeros(1, window_size, input_size, device=device)
+    Returns True on success, False on failure (error is printed).
+    """
+    original_device = next(model.parameters()).device
+    try:
+        # ONNX export must run on CPU (MPS / CUDA are not supported by the exporter)
+        cpu_model = model.cpu()
+        cpu_model.eval()
+        dummy = torch.zeros(1, window_size, input_size)  # CPU tensor
 
         torch.onnx.export(
-            model,
+            cpu_model,
             dummy,
             str(out_path),
             export_params=True,
-            opset_version=17,  # widely supported on edge runtimes
-            do_constant_folding=True,  # fold constant ops for smaller/faster graph
+            opset_version=18,           # stable across PyTorch 2.x
+            do_constant_folding=True,   # fold constant ops for smaller/faster graph
             input_names=["input"],
             output_names=["logits"],
             dynamic_axes={
-                "input": {0: "batch_size", 1: "seq_len"},
+                "input":  {0: "batch_size", 1: "seq_len"},
                 "logits": {0: "batch_size"},
             },
         )
@@ -121,6 +125,9 @@ def export_onnx(
     except Exception as exc:
         print(f"  ⚠  ONNX export failed: {exc}")
         return False
+    finally:
+        # Always restore model back to original device
+        model.to(original_device)
 
 
 # ════════════════════════════════════════════════════════════

@@ -108,12 +108,12 @@ def export_onnx(
             dummy,
             str(out_path),
             export_params=True,
-            opset_version=17,  # widely supported on edge runtimes
-            do_constant_folding=True,  # fold constant ops for smaller/faster graph
+            opset_version=17,           # widely supported on edge runtimes
+            do_constant_folding=True,   # fold constant ops for smaller/faster graph
             input_names=["input"],
             output_names=["logits"],
             dynamic_axes={
-                "input": {0: "batch_size", 1: "seq_len"},
+                "input":  {0: "batch_size", 1: "seq_len"},
                 "logits": {0: "batch_size"},
             },
         )
