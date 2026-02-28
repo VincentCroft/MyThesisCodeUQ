@@ -4,6 +4,18 @@ from .tcn import TCNClassifier
 from .lstm import LSTMClassifier
 from .transformer import TransformerClassifier
 from .cnn_lstm import CNNLSTMClassifier
+from .gan_cnn_lstm import (
+    GANGenerator,
+    GANDiscriminator,
+    GANCNNLSTMClassifier,
+    GANCNNLSTMTrainer,
+)
+from .sgan_cnn import (
+    SGANGenerator,
+    SGANDiscriminator,
+    SGANCNNClassifier,
+    SGANCNNTrainer,
+)
 from .feature_engineering import (
     CLASS_NAMES,
     CLASS_CODES,
@@ -21,6 +33,14 @@ __all__ = [
     "LSTMClassifier",
     "TransformerClassifier",
     "CNNLSTMClassifier",
+    "GANGenerator",
+    "GANDiscriminator",
+    "GANCNNLSTMClassifier",
+    "GANCNNLSTMTrainer",
+    "SGANGenerator",
+    "SGANDiscriminator",
+    "SGANCNNClassifier",
+    "SGANCNNTrainer",
     "CLASS_NAMES",
     "CLASS_CODES",
     "LABEL_MAP",

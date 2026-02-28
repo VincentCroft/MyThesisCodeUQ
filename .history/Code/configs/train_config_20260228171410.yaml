@@ -1,0 +1,117 @@
+data:
+  drop_data_missing: false
+  drop_unusable: true
+  fault_classes:
+    - NORMAL
+    - SLG_FAULT
+    - LL_FAULT
+    - THREE_PHASE_FAULT
+  processed_data_root: ../ProcessedData
+  random_seed: 42
+  step_size: 32
+  val_split: 0.2
+  window_size: 64
+features:
+  normalize_dfdt_freq: true
+  raw_cols:
+    - DFDT
+    - FREQ
+    - IA_MAG
+    - IA_ANG
+    - IB_MAG
+    - IB_ANG
+    - IC_MAG
+    - IC_ANG
+    - VA_MAG
+    - VA_ANG
+    - VB_MAG
+    - VB_ANG
+    - VC_MAG
+    - VC_ANG
+  use_polar_to_rect: true
+inference:
+  min_report_prob: 0.01
+  model_path: ../Code/logs/checkpoints/best_model.pt
+  top_k: 4
+model:
+  cnn_lstm:
+    cnn_channels:
+      - 64
+      - 128
+      - 128
+    dropout: 0.2
+    kernel_size: 3
+    lstm_hidden: 128
+    lstm_layers: 2
+  gan_cnn_lstm:
+    # GAN components (generator + discriminator)
+    noise_dim: 100
+    gan_conv_ch: 128
+    gan_kernel: 3
+    gan_lstm_h: 128
+    gan_lstm_l: 2
+    gan_dropout: 0.3
+    # CNN-LSTM classifier component
+    cls_channels:
+      - 64
+      - 128
+      - 128
+    cls_kernel: 3
+    cls_lstm_h: 128
+    cls_lstm_l: 2
+    cls_dropout: 0.2
+  sgan_cnn:
+    # Generator
+    noise_dim: 100
+    gen_base_ch: 64
+    gen_kernel: 3
+    gen_dropout: 0.2
+    # Discriminator
+    disc_channels:
+      - 64
+      - 128
+      - 128
+    disc_kernel: 3
+    disc_dropout: 0.3
+    # CNN classifier
+    cls_channels:
+      - 64
+      - 128
+      - 128
+    cls_kernel: 3
+    cls_fc_hidden: 128
+    cls_dropout: 0.2
+    # Feature-matching loss weight (λ)
+    fm_lambda: 1.0
+  input_size: 26
+  lstm:
+    dropout: 0.2
+    hidden_size: 128
+    num_layers: 2
+  num_classes: 4
+  tcn:
+    dropout: 0.2
+    kernel_size: 3
+    num_channels:
+      - 64
+      - 128
+      - 128
+      - 64
+  transformer:
+    d_model: 64
+    dim_feedforward: 256
+    dropout: 0.1
+    nhead: 4
+    num_encoder_layers: 3
+  type: TCN
+training:
+  batch_size: 128
+  checkpoint_dir: ../Code/logs/checkpoints
+  early_stopping_patience: 10
+  epochs: 10
+  learning_rate: 0.001
+  log_dir: ../Code/logs
+  scheduler: cosine
+  step_lr_gamma: 0.5
+  step_lr_step: 10
+  weight_decay: 0.0001

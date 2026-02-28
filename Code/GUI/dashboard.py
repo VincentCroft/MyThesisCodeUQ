@@ -1001,7 +1001,14 @@ elif page == "Train":
         c1, c2, c3 = st.columns(3)
 
         with c1:
-            _MODEL_OPTIONS = ["TCN", "LSTM", "Transformer", "CNN_LSTM"]
+            _MODEL_OPTIONS = [
+                "TCN",
+                "LSTM",
+                "Transformer",
+                "CNN_LSTM",
+                "GAN_CNN_LSTM",
+                "SGAN_CNN",
+            ]
             _cfg_type = cfg["model"]["type"]
             _default_idx = (
                 _MODEL_OPTIONS.index(_cfg_type) if _cfg_type in _MODEL_OPTIONS else 0

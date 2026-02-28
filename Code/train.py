@@ -1,7 +1,7 @@
 """
 PMU Fault Classifier — train.py
 Usage:
-    python train.py [--model TCN|LSTM|Transformer|CNN_LSTM] [--run-name my_experiment]
+    python train.py [--model TCN|LSTM|Transformer|CNN_LSTM|GAN_CNN_LSTM|SGAN_CNN] [--run-name my_experiment]
 
 Each training run is saved to:
     Code/logs/checkpoints/<run_name>/
@@ -222,7 +222,7 @@ def main():
     parser.add_argument(
         "--model",
         default=None,
-        choices=["TCN", "LSTM", "Transformer", "CNN_LSTM"],
+        choices=["TCN", "LSTM", "Transformer", "CNN_LSTM", "GAN_CNN_LSTM", "SGAN_CNN"],
         help="Override model type",
     )
     parser.add_argument(

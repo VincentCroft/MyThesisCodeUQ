@@ -1,0 +1,8 @@
+{
+  "input_size": 14,
+  "num_classes": 4,
+  "model_type": "SGAN_CNN",
+  "window_size": 64,
+  "onnx_opset": 17,
+  "onnx_file": "best_model.onnx"
+}
